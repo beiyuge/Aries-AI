@@ -16,11 +16,11 @@
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/transparent"
+            android:background="@android:color/transparent"
             app:navigationIcon="@drawable/ic_arrow_back_24"
-            app:navigationIconTint="@color/m3_surface_container"
+            app:navigationIconTint="@android:color/white"
             app:title="更新历史"
-            app:titleTextColor="@color/m3_surface_container" />
+            app:titleTextColor="@android:color/white" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -51,8 +51,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:textColor="@color/error"
-            android:textAppearance="@style/Widget.Aries.Sidebar.Caption"
+            android:textColor="#C62828"
+            android:textSize="12sp"
             android:visibility="gone" />
 
         <androidx.recyclerview.widget.RecyclerView

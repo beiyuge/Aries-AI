@@ -3,7 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    style="@style/Widget.Aries.Surface.FloatingWindow">
+    app:cardCornerRadius="22dp"
+    app:cardElevation="10dp"
+    app:cardBackgroundColor="@android:color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -79,7 +81,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="0.5dp"
-            android:background="@color/m3_divider" />
+            android:background="#F0F0F0" />
 
         <!-- 消息内容区域 -->
         <ScrollView
@@ -107,7 +109,7 @@
             android:gravity="center_vertical"
             android:paddingHorizontal="12dp"
             android:paddingVertical="6dp"
-            android:background="@color/m3_surface_container">
+            android:background="@android:color/white">
 
             <EditText
                 android:id="@+id/inputMessage"
@@ -118,7 +120,9 @@
                 android:maxHeight="80dp"
                 android:background="@drawable/floating_input_bg"
                 android:hint="输入消息..."
-                style="@style/Widget.Aries.Sidebar.EditText"
+                android:textSize="13sp"
+                android:textColor="@android:color/black"
+                android:textColorHint="#AAAAAA"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
                 android:inputType="textMultiLine"

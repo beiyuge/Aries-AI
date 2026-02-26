@@ -4,7 +4,7 @@
     android:id="@+id/dialogContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/transparent">
+    android:background="@android:color/transparent">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardAgreement"
@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginHorizontal="24dp"
-        app:cardBackgroundColor="@color/m3_surface_container"
+        app:cardBackgroundColor="@color/white"
         app:cardCornerRadius="32dp"
         app:cardElevation="16dp"
         app:strokeColor="@color/blue_glass_stroke"
@@ -43,8 +43,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="欢迎使用 Aries AI"
-                    android:textAppearance="@style/TextAppearance.Aries.Headline.Large"
-                    android:textColor="@color/m3_primary"
+                    android:textColor="@color/blue_glass_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
                     android:letterSpacing="0.03" />
 
                 <TextView
@@ -52,7 +53,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="开启您的智能语音助手之旅"
-                    android:textAppearance="@style/Widget.Aries.Sidebar.Caption" />
+                    android:textColor="@color/blue_glass_text_dim"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <TextView
@@ -60,7 +62,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/user_agreement_title"
-                android:textAppearance="@style/TextAppearance.Aries.Headline.Small"
+                android:textColor="@color/blue_glass_text"
+                android:textSize="17sp"
+                android:textStyle="bold"
                 android:gravity="start"
                 android:layout_marginBottom="12dp"/>
 
@@ -78,7 +82,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/user_agreement_content"
-                    android:textAppearance="@style/Widget.Aries.Dialog.Body"
+                    android:textColor="@color/blue_glass_text"
+                    android:textSize="14sp"
                     android:lineSpacingExtra="5dp"/>
             </androidx.core.widget.NestedScrollView>
 
@@ -88,9 +93,10 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
                 android:text="@string/user_agreement_agree"
-                android:textAppearance="@style/TextAppearance.Aries.Label.Large"
-                android:textColor="@color/m3_on_primary"
-                app:backgroundTint="@color/m3_primary"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/blue_glass_primary"
                 app:cornerRadius="24dp"
                 app:elevation="0dp"
                 app:rippleColor="@color/blue_glass_ripple"/>

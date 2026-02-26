@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/m3_surface_container"
+    android:background="@android:color/white"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:text="更新日志"
         android:textColor="@color/blue_glass_text"
-        android:textAppearance="@style/Widget.Aries.Dialog.Title"
+        android:textSize="20sp"
         android:textStyle="bold" />
 
 
@@ -23,7 +23,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:textColor="@color/blue_glass_icon"
-        android:textAppearance="@style/Widget.Aries.Sidebar.Caption"
+        android:textSize="12sp"
         android:text="下方可以选择历史版本" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
@@ -47,8 +47,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:textColor="@color/error"
-        android:textAppearance="@style/Widget.Aries.Sidebar.Caption"
+        android:textColor="#C62828"
+        android:textSize="12sp"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -69,10 +69,10 @@
             android:layout_height="match_parent"
             android:text=""
             android:textColor="@color/blue_glass_text"
-            android:textAppearance="@style/Widget.Aries.Dialog.Body"
+            android:textSize="15sp"
             android:gravity="center"
             android:alpha="0.6"
-            android:background="@color/transparent" />
+            android:background="@android:color/transparent" />
     </FrameLayout>
 
 </LinearLayout>
