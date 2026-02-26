@@ -20,7 +20,6 @@ package com.ai.phoneagent
 import android.app.Application
 import android.content.Context
 import android.os.Build
-import androidx.appcompat.app.AppCompatDelegate
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 
 /**
@@ -58,9 +57,6 @@ class AriesAgentApp : Application() {
         // 初始化全局上下文
         AppState.init(this)
         
-        // 跟随系统深浅色（Material DayNight）
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-
         // 初始化 HiddenApiBypass（虚拟屏创建必需）
         try {
             if (Build.VERSION.SDK_INT >= 28) {
