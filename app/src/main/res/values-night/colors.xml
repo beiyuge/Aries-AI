@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#0B1220</color>
+    <color name="surface">#111827</color>
+    <color name="surface_variant">#1F2937</color>
+    <color name="text_primary">#E5E7EB</color>
+    <color name="text_secondary">#9CA3AF</color>
+    <color name="text_tertiary">#6B7280</color>
+    <color name="text_on_primary">#F9FAFB</color>
+    <color name="blue_glass_light">#0F172A</color>
+    <color name="blue_glass_surface">#CC111827</color>
+    <color name="blue_glass_stroke">#804B5563</color>
+    <color name="blue_glass_icon">#93C5FD</color>
+    <color name="blue_glass_text">#E2E8F0</color>
+    <color name="blue_glass_text_dim">#99CBD5E1</color>
+    <color name="thinking_background">#172033</color>
+    <color name="card_background">#111827</color>
+    <color name="card_stroke">#334155</color>
+
+    <color name="m3_primary">#9CC8FF</color>
+    <color name="m3_on_primary">#0B1220</color>
+    <color name="m3_background">#020617</color>
+    <color name="m3_on_background">#E2E8F0</color>
+    <color name="m3_surface">#0F172A</color>
+    <color name="m3_surface_container">#111827</color>
+    <color name="m3_surface_container_high">#1E293B</color>
+    <color name="m3_on_surface">#E2E8F0</color>
+    <color name="m3_on_surface_variant">#94A3B8</color>
+    <color name="m3_outline_variant">#334155</color>
+    <color name="m3_divider">#1F2937</color>
+</resources>

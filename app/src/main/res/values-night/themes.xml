@@ -1,14 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.PhoneAgent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/blue_glass_primary</item>
-        <item name="colorPrimaryVariant">@color/blue_glass_primary_variant</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/blue_glass_primary</item>
-        <item name="colorOnSecondary">@color/white</item>
+    <style name="Theme.Aries" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/m3_primary</item>
+        <item name="colorPrimaryVariant">@color/blue_glass_primary</item>
+        <item name="colorOnPrimary">@color/m3_on_primary</item>
+        <item name="colorSecondary">@color/m3_primary</item>
+        <item name="colorOnSecondary">@color/m3_on_primary</item>
+        <item name="colorSurface">@color/m3_surface</item>
+        <item name="colorOnSurface">@color/m3_on_surface</item>
+        <item name="android:colorBackground">@color/m3_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="materialCardViewStyle">@style/Widget.Aries.Card</item>
+        <item name="materialButtonStyle">@style/Widget.Aries.Button</item>
+        <item name="textInputStyle">@style/Widget.Aries.TextInput</item>
     </style>
+
+    <style name="Theme.Aries.App" parent="Theme.Aries">
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+
+    <style name="Theme.Aries.TransparentLaunch" parent="Theme.Aries">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation</item>
+    </style>
+
+    <style name="Theme.PhoneAgent" parent="Theme.Aries.App" />
+
+    <style name="Theme.TransparentLaunch" parent="Theme.Aries.TransparentLaunch" />
 </resources>

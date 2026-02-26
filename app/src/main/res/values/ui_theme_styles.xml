@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Material3 aligned semantic surfaces -->
+    <style name="Widget.Aries.Surface.DrawerCard" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/m3_surface_container</item>
+        <item name="strokeColor">@color/m3_outline_variant</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.Aries.Surface.FloatingWindow" parent="Widget.CardView">
+        <item name="cardCornerRadius">22dp</item>
+        <item name="cardElevation">10dp</item>
+        <item name="cardBackgroundColor">@color/m3_surface_container_high</item>
+    </style>
+
+    <style name="Widget.Aries.Button.IconGhost" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:minHeight">32dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textColor">@color/m3_on_surface_variant</item>
+    </style>
+
+    <!-- Message / thinking block styles -->
+    <style name="TextAppearance.Aries.Message.Content" parent="TextAppearance.Aries.Body.Medium">
+        <item name="android:textColor">@color/m3_on_surface</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="TextAppearance.Aries.Message.Author" parent="TextAppearance.Aries.Title.Medium">
+        <item name="android:textColor">@color/m3_primary</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="TextAppearance.Aries.Message.Action" parent="TextAppearance.Aries.Label.Small">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/m3_on_surface_variant</item>
+    </style>
+
+    <style name="TextAppearance.Aries.Thinking.Header" parent="TextAppearance.Aries.Label.Small">
+        <item name="android:textColor">@color/m3_on_surface_variant</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Aries.Thinking.Content" parent="TextAppearance.Aries.Body.Small">
+        <item name="android:textColor">@color/m3_on_surface_variant</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Widget.Aries.Sidebar.Title" parent="TextAppearance.Aries.Display.Small">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/m3_on_surface</item>
+    </style>
+
+    <style name="Widget.Aries.Sidebar.Subtitle" parent="TextAppearance.Aries.Caption">
+        <item name="android:textColor">@color/m3_on_surface_variant</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="Widget.Aries.Sidebar.SectionTitle" parent="TextAppearance.Aries.Label.Medium">
+        <item name="android:textColor">@color/m3_on_surface</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Widget.Aries.Sidebar.EditText" parent="Widget.AppCompat.EditText">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/m3_on_surface</item>
+        <item name="android:textColorHint">@color/m3_on_surface_variant</item>
+    </style>
+
+    <style name="Widget.Aries.Sidebar.Caption" parent="TextAppearance.Aries.Caption">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/m3_on_surface_variant</item>
+    </style>
+
+    <style name="Widget.Aries.Dialog.Title" parent="TextAppearance.Aries.Headline.Medium">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/m3_on_surface</item>
+    </style>
+
+    <style name="Widget.Aries.Dialog.Body" parent="TextAppearance.Aries.Body.Medium">
+        <item name="android:textColor">@color/m3_on_surface</item>
+    </style>
+
+    <style name="Widget.Aries.Dialog.Link" parent="TextAppearance.Aries.Link">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+</resources>

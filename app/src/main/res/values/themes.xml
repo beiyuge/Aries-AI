@@ -4,7 +4,7 @@
     <!-- ===========================================
          Base Application Theme - 基础应用主题
          =========================================== -->
-    <style name="Theme.Aries" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.Aries" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color -->
         <item name="colorPrimary">@color/blue_glass_primary</item>
         <item name="colorPrimaryVariant">@color/blue_glass_primary_variant</item>
@@ -14,6 +14,9 @@
         <item name="colorSecondary">@color/blue_glass_primary</item>
         <item name="colorSecondaryVariant">@color/blue_glass_primary_variant</item>
         <item name="colorOnSecondary">@color/text_on_primary</item>
+        <item name="colorSurface">@color/m3_surface</item>
+        <item name="colorOnSurface">@color/m3_on_surface</item>
+        <item name="android:colorBackground">@color/m3_background</item>
 
         <!-- Status bar color -->
         <item name="android:statusBarColor">@android:color/transparent</item>

@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="20dp"
-    android:background="@android:color/white">
+    android:background="@color/m3_surface_container">
 
     <TextView
         android:id="@+id/tvTitle"
@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:text="更新日志"
         android:textColor="@color/blue_glass_text"
-        android:textSize="20sp"
+        android:textAppearance="@style/Widget.Aries.Dialog.Title"
         android:textStyle="bold" />
 
     <LinearLayout
@@ -29,7 +29,7 @@
             android:layout_weight="1"
             android:text="v1.0.0"
             android:textColor="@color/blue_glass_text"
-            android:textSize="14sp" />
+            android:textAppearance="@style/Widget.Aries.Dialog.Body" />
 
         <TextView
             android:id="@+id/tvDate"
@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:text="2026-01-03"
             android:textColor="@color/blue_glass_icon"
-            android:textSize="14sp" />
+            android:textAppearance="@style/Widget.Aries.Dialog.Body" />
     </LinearLayout>
 
     <View
@@ -52,6 +52,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:textColor="@color/blue_glass_text"
-        android:textSize="14sp" />
+        android:textAppearance="@style/Widget.Aries.Dialog.Body" />
 
 </LinearLayout>

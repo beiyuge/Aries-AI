@@ -9,7 +9,7 @@
     android:paddingTop="36dp"
     android:paddingBottom="24dp"
     android:clipToPadding="false"
-    android:background="@android:color/transparent">
+    android:background="@color/transparent">
 
     <!-- Branding Section -->
     <LinearLayout
@@ -39,17 +39,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Aries AI"
-                android:textStyle="bold"
-                android:textSize="20sp"
-                android:textColor="@color/blue_glass_text"
+                android:textAppearance="@style/Widget.Aries.Sidebar.Title"
                 android:letterSpacing="0.02" />
                 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="智能手机助手"
-                android:textSize="12sp"
-                android:textColor="@color/blue_glass_icon" />
+                android:textAppearance="@style/Widget.Aries.Sidebar.Subtitle" />
         </LinearLayout>
     </LinearLayout>
 
@@ -59,9 +56,7 @@
         android:layout_height="wrap_content"
         app:cardCornerRadius="20dp"
         app:cardElevation="0dp"
-        app:cardBackgroundColor="@android:color/white"
-        app:strokeWidth="1dp"
-        app:strokeColor="#E0F2FE">
+        style="@style/Widget.Aries.Surface.DrawerCard">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -87,9 +82,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:text="API 配置"
-                    android:textStyle="bold"
-                    android:textSize="15sp"
-                    android:textColor="@color/blue_glass_text" />
+                    android:textAppearance="@style/Widget.Aries.Sidebar.SectionTitle" />
             </LinearLayout>
 
             <EditText
@@ -102,9 +95,7 @@
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="12dp"
                 android:inputType="textNoSuggestions|textVisiblePassword"
-                android:textSize="14sp"
-                android:textColor="@color/blue_glass_text"
-                android:textColorHint="#90A4AE"
+                style="@style/Widget.Aries.Sidebar.EditText"
                 android:layout_marginBottom="12dp" />
 
             <LinearLayout
@@ -118,7 +109,7 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_public_24"
-                    app:tint="#1F2937" />
+                    app:tint="@color/m3_on_surface" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -126,9 +117,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="10dp"
                     android:text="使用第三方 OpenAI 兼容 API"
-                    android:textStyle="bold"
-                    android:textSize="15sp"
-                    android:textColor="#1F2937" />
+                    android:textAppearance="@style/Widget.Aries.Sidebar.SectionTitle" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/swUseThirdPartyApi"
@@ -154,8 +143,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Base URL"
-                        android:textSize="12sp"
-                        android:textColor="#1F2937"
+                        android:textAppearance="@style/Widget.Aries.Sidebar.Caption"
                         android:layout_marginStart="4dp"
                         android:layout_marginBottom="4dp" />
 
@@ -169,9 +157,7 @@
                         android:paddingHorizontal="14dp"
                         android:paddingVertical="10dp"
                         android:inputType="textUri"
-                        android:textSize="14sp"
-                        android:textColor="@color/blue_glass_text"
-                        android:textColorHint="#90A4AE"
+                        style="@style/Widget.Aries.Sidebar.EditText"
                         android:layout_marginBottom="10dp" />
                 </LinearLayout>
 
@@ -184,8 +170,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Model"
-                        android:textSize="12sp"
-                        android:textColor="#1F2937"
+                        android:textAppearance="@style/Widget.Aries.Sidebar.Caption"
                         android:layout_marginStart="4dp"
                         android:layout_marginBottom="4dp" />
 
@@ -199,9 +184,7 @@
                         android:paddingHorizontal="14dp"
                         android:paddingVertical="10dp"
                         android:inputType="textNoSuggestions"
-                        android:textSize="14sp"
-                        android:textColor="@color/blue_glass_text"
-                        android:textColorHint="#90A4AE" />
+                        style="@style/Widget.Aries.Sidebar.EditText" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -211,9 +194,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="获取您的 API Key >"
-                android:textSize="13sp"
-                android:textColor="@color/blue_glass_primary"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.Aries.Link"
                 android:paddingVertical="4dp"
                 android:paddingEnd="4dp"
                 android:background="?attr/selectableItemBackground"
@@ -225,9 +206,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:text="验证连接"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
+                android:textAppearance="@style/TextAppearance.Aries.Label.Medium"
+                android:textColor="@color/m3_on_primary"
                 app:backgroundTint="@color/blue_glass_primary"
                 app:cornerRadius="24dp"
                 app:elevation="0dp"
@@ -240,9 +220,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="未检查"
-                android:textSize="12sp"
+                android:textAppearance="@style/Widget.Aries.Sidebar.Caption"
                 android:gravity="center"
-                android:textColor="@color/blue_glass_icon"
                 android:paddingTop="10dp" />
 
         </LinearLayout>
