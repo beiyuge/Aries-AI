@@ -12,7 +12,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="我"
-        android:textAppearance="@style/TextAppearance.Aries.Thinking.Header"
+        android:textColor="@color/m3t_on_surface_variant"
+        android:textSize="13sp"
+        android:textStyle="bold"
         android:visibility="gone" />
 
     <TextView
@@ -20,7 +22,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:lineSpacingExtra="4dp"
-        android:textAppearance="@style/TextAppearance.Aries.Message.Content"
+        android:textAppearance="@style/TextAppearance.M3t.Chat.Message"
         android:textIsSelectable="true" />
 
 </LinearLayout>
+
