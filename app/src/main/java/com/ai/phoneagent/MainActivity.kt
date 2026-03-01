@@ -108,6 +108,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.ai.phoneagent.core.automation.ActivityAutomationInstructionGateway
 import com.ai.phoneagent.core.automation.AutomationLogBridge
+import com.ai.phoneagent.core.parser.ActionParser
+import com.ai.phoneagent.core.skill.SkillCallRegistry
+import com.ai.phoneagent.core.skill.SkillRegistry
+import com.ai.phoneagent.core.utils.ActionUtils
 import com.ai.phoneagent.ui.inputbar.InputState
 import com.ai.phoneagent.ui.inputbar.InputBar
 import androidx.compose.runtime.*
@@ -225,6 +229,8 @@ class MainActivity : AppCompatActivity() {
     private val inputBarState = mutableStateOf<InputState>(InputState.Idle)
     private val voiceAmplitudeState = mutableStateOf(0f)
     private val agentModeEnabledState = mutableStateOf(false)
+    private val chatActionParser = ActionParser()
+    private val skillRegistry by lazy { SkillRegistry(applicationContext) }
 
     @Volatile private var suppressApiInputWatcher: Boolean = false
     @Volatile private var apiNeedsRecheckToastShown: Boolean = false
@@ -2402,101 +2408,162 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                var streamOk = false
-                var lastError: Throwable? = null
-                val maxAttempts = 2
-
-                for (attempt in 1..maxAttempts) {
-                    if (attempt > 1) {
-                        // 重试前清理界面
-                        reasoningSb.clear()
-                        contentSb.clear()
-                        runOnUiThread { StreamRenderHelper.initThinkingState(vh) }
-                        if (FloatingChatService.isRunning()) {
-                            FloatingChatService.getInstance()?.resetExternalStreamAiReply()
-                        }
+                fun resetStreamState() {
+                    reasoningSb.clear()
+                    contentSb.clear()
+                    runOnUiThread { StreamRenderHelper.initThinkingState(vh) }
+                    if (FloatingChatService.isRunning()) {
+                        FloatingChatService.getInstance()?.resetExternalStreamAiReply()
                     }
+                }
 
-                    val result =
+                suspend fun streamChatWithRetry(
+                    messages: List<ChatRequestMessage>,
+                    resetBeforeFirstAttempt: Boolean
+                ): Pair<Boolean, Throwable?> {
+                    val maxAttempts = 2
+                    var lastError: Throwable? = null
+                    for (attempt in 1..maxAttempts) {
+                        if (attempt > 1 || (attempt == 1 && resetBeforeFirstAttempt)) {
+                            resetStreamState()
+                        }
+
+                        val result =
                             AutoGlmClient.sendChatStreamResult(
-                                    apiKey = apiKey,
-                                    baseUrl = resolvedBaseUrl,
-                                    model = resolvedModel,
-                                    messages = chatHistory,
-                                    temperature = if (retryMode) 0.7f else null,
-                                    onReasoningDelta = { delta ->
-                                        if (delta.isNotBlank()) {
-                                            reasoningSb.append(delta)
-                                            runOnUiThread {
-                                                StreamRenderHelper.processReasoningDelta(
-                                                        vh,
-                                                        delta,
-                                                        lifecycleScope,
-                                                ) { smoothScrollToBottom() }
-                                            }
-                                            if (FloatingChatService.isRunning()) {
-                                                FloatingChatService.getInstance()
-                                                        ?.appendExternalReasoningDelta(delta)
-                                            }
+                                apiKey = apiKey,
+                                baseUrl = resolvedBaseUrl,
+                                model = resolvedModel,
+                                messages = messages,
+                                temperature = if (retryMode) 0.7f else null,
+                                onReasoningDelta = { delta ->
+                                    if (delta.isNotBlank()) {
+                                        reasoningSb.append(delta)
+                                        runOnUiThread {
+                                            StreamRenderHelper.processReasoningDelta(
+                                                vh,
+                                                delta,
+                                                lifecycleScope,
+                                            ) { smoothScrollToBottom() }
                                         }
-                                    },
-                                    onContentDelta = { delta ->
-                                        if (delta.isNotEmpty()) {
-                                            runOnUiThread {
-                                                StreamRenderHelper.processContentDelta(
-                                                        vh,
-                                                        delta,
-                                                        lifecycleScope,
-                                                        this@MainActivity,
-                                                        onScroll = { smoothScrollToBottom() },
-                                                        onPhaseChange = { isAnswerPhase ->
-                                                            if (isAnswerPhase) {
-                                                                StreamRenderHelper.transitionToAnswer(vh)
-                                                                if (
-                                                                        vh.thinkingText.visibility ==
-                                                                                View.VISIBLE ||
-                                                                                vh.thinkingContentArea
-                                                                                        .visibility ==
-                                                                                        View.VISIBLE
-                                                                ) {
-                                                                    vh.thinkingHeader.performClick()
-                                                                }
-                                                            }
-                                                        },
-                                                )
-                                            }
-
-                                            // 更新 contentSb（用于保存）
-                                            // 注意：这里我们保存原始内容，解析器会处理显示
-                                            contentSb.append(delta)
-
-                                            // 同步到悬浮窗
-                                            if (FloatingChatService.isRunning()) {
-                                                FloatingChatService.getInstance()
-                                                        ?.appendExternalContentDelta(delta)
-                                            }
+                                        if (FloatingChatService.isRunning()) {
+                                            FloatingChatService.getInstance()
+                                                ?.appendExternalReasoningDelta(delta)
                                         }
-                                    },
+                                    }
+                                },
+                                onContentDelta = { delta ->
+                                    if (delta.isNotEmpty()) {
+                                        runOnUiThread {
+                                            StreamRenderHelper.processContentDelta(
+                                                vh,
+                                                delta,
+                                                lifecycleScope,
+                                                this@MainActivity,
+                                                onScroll = { smoothScrollToBottom() },
+                                                onPhaseChange = { isAnswerPhase ->
+                                                    if (isAnswerPhase) {
+                                                        StreamRenderHelper.transitionToAnswer(vh)
+                                                        if (
+                                                            vh.thinkingText.visibility == View.VISIBLE ||
+                                                            vh.thinkingContentArea.visibility == View.VISIBLE
+                                                        ) {
+                                                            vh.thinkingHeader.performClick()
+                                                        }
+                                                    }
+                                                },
+                                            )
+                                        }
+
+                                        // 更新 contentSb（用于保存）
+                                        // 注意：这里我们保存原始内容，解析器会处理显示
+                                        contentSb.append(delta)
+
+                                        // 同步到悬浮窗
+                                        if (FloatingChatService.isRunning()) {
+                                            FloatingChatService.getInstance()
+                                                ?.appendExternalContentDelta(delta)
+                                        }
+                                    }
+                                },
                             )
 
-                    if (result.isSuccess) {
-                        streamOk = true
-                        break
+                        if (result.isSuccess) {
+                            return true to null
+                        }
+                        lastError = result.exceptionOrNull()
+                        if (attempt < maxAttempts) delay(500L * attempt)
                     }
-                    lastError = result.exceptionOrNull()
-                    if (attempt < maxAttempts) delay(500L * attempt)
+                    return false to lastError
+                }
+
+                var streamOutcome = streamChatWithRetry(chatHistory, resetBeforeFirstAttempt = false)
+                var streamOk = streamOutcome.first
+                var lastError: Throwable? = streamOutcome.second
+                var finalContent =
+                    if (streamOk) {
+                        contentSb.toString()
+                    } else {
+                        val err = lastError?.message ?: "Unknown error"
+                        "请求失败: $err"
+                    }
+
+                if (streamOk) {
+                    val requestedSkillId =
+                        extractRequestedSkillIdFromReply(finalContent)
+                            ?.trim()
+                            ?.trim('"', '\'', ' ')
+                            ?.lowercase()
+                            .orEmpty()
+                    if (requestedSkillId.isNotBlank()) {
+                        val skillResult =
+                            withContext(Dispatchers.Default) {
+                                SkillCallRegistry.execute(
+                                    requestedSkillId,
+                                    this@MainActivity,
+                                    PhoneAgentAccessibilityService.instance,
+                                )
+                            }
+                        if (skillResult.success) {
+                            val followupHistory = chatHistory.toMutableList()
+                            followupHistory += ChatRequestMessage(role = "assistant", content = finalContent)
+                            followupHistory +=
+                                ChatRequestMessage(
+                                    role = "user",
+                                    content =
+                                        buildString {
+                                            append("SKILL_OUTPUT:")
+                                            append(requestedSkillId)
+                                            append("\n")
+                                            append(skillResult.output.trim())
+                                            append("\n")
+                                            append("请根据以上 skill 输出给用户最终答复，并保持既定输出标记格式。")
+                                        },
+                                )
+
+                            streamOutcome =
+                                streamChatWithRetry(
+                                    messages = followupHistory,
+                                    resetBeforeFirstAttempt = true,
+                                )
+                            streamOk = streamOutcome.first
+                            lastError = streamOutcome.second
+                            finalContent =
+                                if (streamOk) {
+                                    contentSb.toString()
+                                } else {
+                                    val err = lastError?.message ?: "Unknown error"
+                                    "请求失败: $err"
+                                }
+                        } else {
+                            streamOk = false
+                            finalContent =
+                                "技能调用失败：${skillResult.error.ifBlank { "unknown" }}"
+                        }
+                    }
                 }
 
                 // 处理结果
                 val timeCost = (System.currentTimeMillis() - startTime) / 1000
-
-                val finalContent =
-                        if (streamOk) {
-                            contentSb.toString()
-                        } else {
-                            val err = lastError?.message ?: "Unknown error"
-                            "请求失败: $err"
-                        }
 
                 // 显示完成状态
                 runOnUiThread {
@@ -3221,6 +3288,47 @@ class MainActivity : AppCompatActivity() {
 
         return null to stripAutomationMarker(source.replace("꽁", "").trim())
     }
+
+    private fun buildChatCallableSkillPrompt(): String {
+        val enabledSkills = skillRegistry.loadEnabledSkills()
+        val descriptors = SkillCallRegistry.getDescriptors(enabledSkills.map { it.id })
+        if (descriptors.isEmpty()) return ""
+        val skillLines =
+            descriptors.joinToString("\n") { descriptor ->
+                "- ${descriptor.id}: ${descriptor.description}\n  returns: ${descriptor.returns}"
+            }
+        return """
+            你还可以调用以下本地 Skills（由系统代执行）：
+            $skillLines
+
+            调用规则：
+            1) 若需要调用 skill，在【回答开始】和【回答结束】之间仅输出一行：
+               do(action="call_skill", skill="<skill_id>", desc="调用原因")
+            2) 调用 skill 的这一轮不要输出最终结论。
+            3) 系统执行后会在下一条用户消息提供：
+               SKILL_OUTPUT:<skill_id>
+               <output>
+            4) 收到 SKILL_OUTPUT 后，再输出完整最终答案。
+        """.trimIndent()
+    }
+
+    private fun extractRequestedSkillIdFromReply(rawReply: String): String? {
+        val (_, answer) = parseStoredAiContent(rawReply)
+        val actionSnippet = ActionUtils.extractFirstActionSnippet(answer) ?: answer
+        val parsed = chatActionParser.parse(actionSnippet)
+        if (parsed.metadata != "do") return null
+        val actionName =
+            parsed.actionName
+                ?.trim()
+                ?.trim('"', '\'', ' ')
+                ?.lowercase()
+                ?.replace(" ", "_")
+                .orEmpty()
+        if (actionName != "call_skill") return null
+        return parsed.fields["skill"]
+            ?: parsed.fields["skill_id"]
+            ?: parsed.fields["name"]
+    }
     
     /**
      * 构建完整的对话历史，传递给AI模型
@@ -3228,6 +3336,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun buildChatHistory(conversation: Conversation, retryMode: Boolean = false): List<ChatRequestMessage> {
         val history = mutableListOf<ChatRequestMessage>()
+        val callableSkillPrompt = buildChatCallableSkillPrompt()
         
         // 添加系统提示
         history.add(ChatRequestMessage(
@@ -3261,6 +3370,7 @@ class MainActivity : AppCompatActivity() {
                    我可以帮你执行这个手机操作。
                    [[AUTO_EXECUTE:打开手机浏览器并访问 https://www.jd.com]]
                    【回答结束】
+                ${if (callableSkillPrompt.isNotBlank()) "\n\n$callableSkillPrompt" else ""}
             """.trimIndent()
         ))
 

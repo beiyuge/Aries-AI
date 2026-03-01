@@ -1,7 +1,6 @@
 ﻿package com.ai.phoneagent.core.tools
 
 import android.content.Context
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import com.ai.phoneagent.PhoneAgentAccessibilityService
 import com.ai.phoneagent.core.tools.extended.ExtendedAppMapping
@@ -70,6 +69,14 @@ object AppPackageManager {
     
     private var lastUpdateTime = 0L
     private const val CACHE_VALIDITY_MS = 300000L // 5分钟缓存时间
+
+    // Semantic aliases for common app intents.
+    private val semanticAliases = mapOf(
+        "笔记" to listOf("笔记", "备忘录", "便签", "note", "notes", "memo", "notepad"),
+        "note" to listOf("笔记", "备忘录", "便签", "note", "notes", "memo", "notepad"),
+        "备忘录" to listOf("笔记", "备忘录", "便签", "note", "notes", "memo", "notepad"),
+        "memo" to listOf("笔记", "备忘录", "便签", "note", "notes", "memo", "notepad"),
+    )
     
     /**
      * 加载所有映射到缓存
@@ -133,15 +140,15 @@ object AppPackageManager {
             val installedPackages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
             
             for (app in installedPackages) {
-                // 只缓存用户安装的应用（非系统应用）
-                if (app.flags and ApplicationInfo.FLAG_SYSTEM == 0 || isImportantSystemApp(app.packageName)) {
-                    val appName = packageManager.getApplicationLabel(app).toString()
-                    appCache[app.packageName] = appName
-                    
-                    // 缓存应用名（小写）用于模糊匹配
-                    appNameToPackage[appName.lowercase()] = app.packageName
-                    appNameToPackage[app.packageName.lowercase()] = app.packageName
-                }
+                // Keep launchable apps (including system launcher apps like Notes/Memo).
+                if (!isLaunchable(packageManager, app.packageName)) continue
+
+                val appName = packageManager.getApplicationLabel(app).toString()
+                appCache[app.packageName] = appName
+                
+                // 缓存应用名（小写）用于模糊匹配
+                appNameToPackage[appName.lowercase()] = app.packageName
+                appNameToPackage[app.packageName.lowercase()] = app.packageName
             }
             
             lastUpdateTime = currentTime
@@ -151,21 +158,10 @@ object AppPackageManager {
             e.printStackTrace()
         }
     }
-    
-    /**
-     * 是否为重要系统应用（保留）
-     */
-    private fun isImportantSystemApp(packageName: String): Boolean {
-        val importantApps = setOf(
-            "com.android.settings",           // 设置
-            "com.android.chrome",              // Chrome
-            "com.google.android.gms",          // Google服务
-            "com.android.dialer",              // 拨号
-            "com.android.phone",               // 电话
-            "com.android.contacts",            // 联系人
-            "com.android.messaging"            // 短信
-        )
-        return importantApps.contains(packageName)
+
+    private fun isLaunchable(packageManager: PackageManager, packageName: String): Boolean {
+        return runCatching { packageManager.getLaunchIntentForPackage(packageName) != null }
+            .getOrDefault(false)
     }
     
     /**
@@ -182,7 +178,8 @@ object AppPackageManager {
         // 命中LRU缓存（带TTL）
         synchronized(resolveCache) {
             resolveCache[lowerQuery]?.let { (pkg, ts) ->
-                if (System.currentTimeMillis() - ts < RESOLVE_CACHE_TTL_MS) {
+                if (System.currentTimeMillis() - ts < RESOLVE_CACHE_TTL_MS &&
+                        (isInstalledCached(pkg) || isExplicitPackageQuery(trimmedQuery))) {
                     return pkg
                 } else {
                     resolveCache.remove(lowerQuery)
@@ -194,16 +191,26 @@ object AppPackageManager {
             cacheResolution(lowerQuery, pkg)
             return pkg
         }
+
+        fun recordInstalled(pkg: String): String? {
+            if (!isInstalledCached(pkg)) return null
+            return record(pkg)
+        }
+
+        // Explicit package query should bypass alias mapping.
+        if (isExplicitPackageQuery(trimmedQuery)) {
+            return record(trimmedQuery)
+        }
         
         // ===== 优先级1: 精确匹配 =====
         // 1.1 包名直接匹配
-        appNameToPackage[lowerQuery]?.let { return record(it) }
-        appNameToPackage[trimmedQuery]?.let { return record(it) }
+        appNameToPackage[lowerQuery]?.let { recordInstalled(it)?.let { pkg -> return pkg } }
+        appNameToPackage[trimmedQuery]?.let { recordInstalled(it)?.let { pkg -> return pkg } }
         
         // 1.2 应用名精确匹配（不区分大小写）
         appNameToPackage.entries.firstOrNull { (name, _) ->
             name.equals(lowerQuery) || name.equals(trimmedQuery)
-        }?.value?.let { return record(it) }
+        }?.value?.let { recordInstalled(it)?.let { pkg -> return pkg } }
         
         // ===== 优先级2: 高优先级关键词匹配（防止误匹配的关键） =====
         // 2.1 完整关键词匹配（优先匹配完整的关键词如"移动云手机"）
@@ -211,14 +218,17 @@ object AppPackageManager {
             lowerQuery.contains(keyword.lowercase()) || 
             keyword.lowercase().contains(lowerQuery)
         }?.let { keyword ->
-            highPriorityKeywords[keyword]?.let { return record(it) }
+            highPriorityKeywords[keyword]?.let { recordInstalled(it)?.let { pkg -> return pkg } }
         }
         
         // 2.2 反向检查：如果查询词是某个高优先级词的子串，优先返回该高优先级包
         highPriorityKeywords.entries.firstOrNull { (keyword, _) ->
             keyword.lowercase().contains(lowerQuery) && 
             keyword.length > lowerQuery.length
-        }?.value?.let { return record(it) }
+        }?.value?.let { recordInstalled(it)?.let { pkg -> return pkg } }
+
+        // 2.3 Semantic fallback for ambiguous intents such as "笔记/备忘录".
+        findSemanticInstalledMatch(lowerQuery)?.let { return record(it) }
         
         // ===== 优先级3: 单词边界匹配 =====
         // 避免"云"匹配到"阿里云盘"和"移动云"
@@ -227,19 +237,22 @@ object AppPackageManager {
             appNameToPackage.entries.firstOrNull { (name, _) ->
                 // 检查是否是单词边界匹配
                 isWordBoundaryMatch(lowerQuery, name)
-            }?.value?.let { return record(it) }
+            }?.value?.let { recordInstalled(it)?.let { pkg -> return pkg } }
         }
         
         // ===== 优先级4: 智能模糊匹配（最后手段） =====
         // 4.1 反向查找：已安装应用中，应用名包含查询词
-        val installedMatch = appCache.entries.firstOrNull { (_, appName) ->
+        val installedMatch = appCache.entries.firstOrNull { (packageName, appName) ->
             val lowerAppName = appName.lowercase()
+            val lowerPkg = packageName.lowercase()
             // 避免太短的匹配，至少匹配2个字符
             lowerQuery.length >= 2 && (
                 lowerAppName == lowerQuery ||
                 lowerAppName.contains(lowerQuery) ||
+                lowerPkg.contains(lowerQuery) ||
                 // 检查是否是完整单词匹配
-                isCompleteWordMatch(lowerQuery, lowerAppName)
+                isCompleteWordMatch(lowerQuery, lowerAppName) ||
+                isCompleteWordMatch(lowerQuery, lowerPkg)
             )
         }?.key
         
@@ -256,7 +269,7 @@ object AppPackageManager {
         }?.value
         
         if (mappedMatch != null) {
-            return record(mappedMatch)
+            recordInstalled(mappedMatch)?.let { return it }
         }
         
         // 4.3 如果是有效的包名格式，直接返回（作为最后手段）
@@ -265,6 +278,63 @@ object AppPackageManager {
         }
         
         return null
+    }
+
+    fun findBestInstalledPackageByQuery(query: String?): String? {
+        if (query.isNullOrBlank()) return null
+        val lowerQuery = query.trim().lowercase()
+
+        appCache.entries.firstOrNull { (_, appName) ->
+            appName.equals(query, ignoreCase = true)
+        }?.key?.let { return it }
+
+        findSemanticInstalledMatch(lowerQuery)?.let { return it }
+
+        return appCache.entries.firstOrNull { (packageName, appName) ->
+            appName.contains(query, ignoreCase = true) ||
+                packageName.contains(lowerQuery) ||
+                isWordBoundaryMatch(lowerQuery, appName.lowercase())
+        }?.key
+    }
+
+    private fun findSemanticInstalledMatch(lowerQuery: String): String? {
+        val semanticKeywords = semanticKeywordsFor(lowerQuery) ?: return null
+        return appCache.entries
+            .asSequence()
+            .map { (packageName, appName) ->
+                val score = semanticScore(appName.lowercase(), packageName.lowercase(), semanticKeywords)
+                Triple(packageName, appName, score)
+            }
+            .filter { it.third > 0 }
+            .sortedByDescending { it.third }
+            .firstOrNull()
+            ?.first
+    }
+
+    private fun semanticKeywordsFor(lowerQuery: String): List<String>? {
+        semanticAliases.entries.firstOrNull { (seed, _) ->
+            lowerQuery.contains(seed) || seed.contains(lowerQuery)
+        }?.value?.let { return it }
+
+        return null
+    }
+
+    private fun semanticScore(appName: String, packageName: String, keywords: List<String>): Int {
+        var score = 0
+        keywords.forEach { keyword ->
+            if (appName == keyword) score += 120
+            else if (appName.contains(keyword)) score += 60
+            if (packageName.contains(keyword)) score += 40
+        }
+        return score
+    }
+
+    private fun isInstalledCached(packageName: String): Boolean {
+        return appCache.containsKey(packageName)
+    }
+
+    private fun isExplicitPackageQuery(query: String): Boolean {
+        return query.contains('.') && isValidPackageName(query)
     }
     
     /**

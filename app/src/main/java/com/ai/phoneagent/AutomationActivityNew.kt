@@ -55,6 +55,9 @@ import androidx.lifecycle.lifecycleScope
 import com.ai.phoneagent.core.automation.AutomationInstructionRequest
 import com.ai.phoneagent.core.automation.AutomationLogBridge
 import com.ai.phoneagent.core.config.AgentConfiguration
+import com.ai.phoneagent.core.engine.AgentControl
+import com.ai.phoneagent.core.engine.AgentEngineFactory
+import com.ai.phoneagent.core.engine.AgentExecutionRequest
 import com.ai.phoneagent.core.tools.AIToolHandler
 import com.ai.phoneagent.core.tools.ToolRegistration
 import com.ai.phoneagent.databinding.ActivityAutomationBinding
@@ -961,83 +964,86 @@ class AutomationActivityNew : AppCompatActivity() {
                             }
                         }
 
-                        val agent = UiAutomationAgent(this@AutomationActivityNew, config)
+                        val engineSelection = AgentEngineFactory.create(this@AutomationActivityNew, config)
+                        appendLog("执行引擎：${engineSelection.mode.name.lowercase()}")
                         val result =
-                                agent.run(
-                                        apiKey = apiKey,
-                                        baseUrl = baseUrl,
-                                        model = model,
-                                        useThirdPartyApi = useThirdPartyApi,
-                                        task = task,
-                                        service = svc,
-                                        control =
-                                                object : UiAutomationAgent.Control {
-                                                    override fun isPaused(): Boolean = paused
+                                engineSelection.engine.run(
+                                        AgentExecutionRequest(
+                                                apiKey = apiKey,
+                                                baseUrl = baseUrl,
+                                                model = model,
+                                                useThirdPartyApi = useThirdPartyApi,
+                                                task = task,
+                                                service = svc,
+                                                control =
+                                                        object : AgentControl {
+                                                            override fun isPaused(): Boolean = paused
 
-                                                    override suspend fun confirm(
-                                                            message: String
-                                                    ): Boolean {
-                                                        return suspendCancellableCoroutine { cont ->
-                                                            runOnUiThread {
-                                                                val dialog =
-                                                                        AlertDialog.Builder(
-                                                                                        this@AutomationActivityNew
-                                                                                )
-                                                                                .setTitle("需要确认")
-                                                                                .setMessage(message)
-                                                                                .setCancelable(
-                                                                                        false
-                                                                                )
-                                                                                .setPositiveButton(
-                                                                                        "确认"
-                                                                                ) { _, _ ->
-                                                                                    if (cont.isActive
-                                                                                    )
-                                                                                            cont.resume(
-                                                                                                    true
+                                                            override suspend fun confirm(
+                                                                    message: String
+                                                            ): Boolean {
+                                                                return suspendCancellableCoroutine { cont ->
+                                                                    runOnUiThread {
+                                                                        val dialog =
+                                                                                AlertDialog.Builder(
+                                                                                                this@AutomationActivityNew
+                                                                                        )
+                                                                                        .setTitle("需要确认")
+                                                                                        .setMessage(message)
+                                                                                        .setCancelable(
+                                                                                                false
+                                                                                        )
+                                                                                        .setPositiveButton(
+                                                                                                "确认"
+                                                                                        ) { _, _ ->
+                                                                                            if (cont.isActive
                                                                                             )
-                                                                                }
-                                                                                .setNegativeButton(
-                                                                                        "拒绝"
-                                                                                ) { _, _ ->
-                                                                                    if (cont.isActive
-                                                                                    )
-                                                                                            cont.resume(
-                                                                                                    false
+                                                                                                    cont.resume(
+                                                                                                            true
+                                                                                                    )
+                                                                                        }
+                                                                                        .setNegativeButton(
+                                                                                                "拒绝"
+                                                                                        ) { _, _ ->
+                                                                                            if (cont.isActive
                                                                                             )
-                                                                                }
-                                                                                .create()
-                                                                dialog.show()
-                                                                cont.invokeOnCancellation {
-                                                                    runCatching { dialog.dismiss() }
+                                                                                                    cont.resume(
+                                                                                                            false
+                                                                                                    )
+                                                                                        }
+                                                                                        .create()
+                                                                        dialog.show()
+                                                                        cont.invokeOnCancellation {
+                                                                            runCatching { dialog.dismiss() }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                onLog = { msg ->
+                                                    appendLog(msg)
+
+                                                    // 检测虚拟屏状态并更新 UI
+                                                    if (isBackgroundMode) {
+                                                        runOnUiThread {
+                                                            when {
+                                                                msg.contains("虚拟屏已准备就绪") -> {
+                                                                    val displayId =
+                                                                            VirtualDisplayController
+                                                                                    .getDisplayId()
+                                                                    tvVirtualDisplayStatus.text =
+                                                                            "虚拟屏状态: 已启动 (displayId=$displayId)"
+                                                                }
+                                                                msg.contains("虚拟屏准备失败") ||
+                                                                        msg.contains("虚拟屏模式启动失败") -> {
+                                                                    tvVirtualDisplayStatus.text =
+                                                                            "虚拟屏状态: 创建失败"
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 },
-                                        onLog = { msg ->
-                                            appendLog(msg)
-
-                                            // 检测虚拟屏状态并更新 UI
-                                            if (isBackgroundMode) {
-                                                runOnUiThread {
-                                                    when {
-                                                        msg.contains("虚拟屏已准备就绪") -> {
-                                                            val displayId =
-                                                                    VirtualDisplayController
-                                                                            .getDisplayId()
-                                                            tvVirtualDisplayStatus.text =
-                                                                    "虚拟屏状态: 已启动 (displayId=$displayId)"
-                                                        }
-                                                        msg.contains("虚拟屏准备失败") ||
-                                                                msg.contains("虚拟屏模式启动失败") -> {
-                                                            tvVirtualDisplayStatus.text =
-                                                                    "虚拟屏状态: 创建失败"
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
+                                        )
                                 )
                         appendLog("结束：${result.message}（steps=${result.steps}）")
                         AutomationOverlay.complete(result.message)

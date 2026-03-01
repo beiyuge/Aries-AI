@@ -260,20 +260,24 @@ class ActionExecutor(
                     service?.let { AppPackageManager.resolvePackageByLabel(it, t) }?.let { add(it) }
                 }.distinct()
 
-        val finalCandidates =
-                if (candidates.isEmpty()) {
-                    val allApps = AppPackageManager.getAllInstalledApps()
-                    allApps
-                            .filter { (_, appName) ->
-                                appName.contains(t, ignoreCase = true) ||
-                                        t.contains(appName, ignoreCase = true) ||
-                                        isWordBoundaryMatch(t, appName)
-                            }
-                            .map { it.first }
-                            .take(3)
-                } else {
-                    candidates
-                }
+        val fallbackCandidates =
+                AppPackageManager.getAllInstalledApps()
+                        .asSequence()
+                        .filter { (pkg, appName) ->
+                            appName.contains(t, ignoreCase = true) ||
+                                    t.contains(appName, ignoreCase = true) ||
+                                    isWordBoundaryMatch(t, appName) ||
+                                    pkg.contains(t.lowercase())
+                        }
+                        .map { it.first }
+                        .take(4)
+                        .toList()
+
+        if (fallbackCandidates.isNotEmpty() && candidates.isNotEmpty()) {
+            onLog("启动候选补充: map=${candidates.joinToString()} fallback=${fallbackCandidates.joinToString()}")
+        }
+
+        val finalCandidates = (candidates + fallbackCandidates).distinct()
 
         var pkgName = finalCandidates.firstOrNull().orEmpty().ifBlank { t }
         var intent: android.content.Intent? = null
@@ -290,7 +294,7 @@ class ActionExecutor(
 
         onLog("执行操作: launch($pkgName)")
         if (intent == null) {
-            onLog("启动失败: 未找到可启动入口 $pkgName (候选: ${candidates.joinToString()})")
+            onLog("启动失败: 未找到可启动入口 $pkgName (候选: ${finalCandidates.joinToString()})")
             return false
         }
 
@@ -1346,6 +1350,4 @@ class ActionExecutor(
         onLog("[Type][Shizuku] $stage=$status$suffix")
     }
 }
-
-
 

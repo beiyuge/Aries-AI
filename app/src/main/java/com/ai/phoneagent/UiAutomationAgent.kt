@@ -23,6 +23,8 @@ import com.ai.phoneagent.core.cache.ScreenshotManager
 import com.ai.phoneagent.core.config.AgentConfiguration
 import com.ai.phoneagent.core.executor.ActionExecutor
 import com.ai.phoneagent.core.parser.ActionParser
+import com.ai.phoneagent.core.skill.SkillCallRegistry
+import com.ai.phoneagent.core.skill.SkillRuntimeContext
 import com.ai.phoneagent.core.templates.PromptTemplates
 import com.ai.phoneagent.core.utils.ActionUtils
 import com.ai.phoneagent.net.AutoGlmClient
@@ -109,6 +111,7 @@ class UiAutomationAgent(
             service: PhoneAgentAccessibilityService?,
             control: Control = NoopControl,
             onLog: (String) -> Unit,
+            runtimeContext: SkillRuntimeContext? = null,
     ): AgentResult {
         val metrics = (service?.resources ?: appContext.resources).displayMetrics
         var screenW = metrics.widthPixels
@@ -152,7 +155,8 @@ class UiAutomationAgent(
                     control,
                     onLog,
                     screenW,
-                    screenH
+                    screenH,
+                    runtimeContext
             )
         } finally {
             // 清理虚拟屏及预览悬浮窗
@@ -172,6 +176,7 @@ class UiAutomationAgent(
             onLog: (String) -> Unit,
             screenW: Int,
             screenH: Int,
+            runtimeContext: SkillRuntimeContext?,
     ): AgentResult {
         // 智能应用启动
         val smartLaunched = trySmartAppLaunch(task, service, onLog)
@@ -189,16 +194,17 @@ class UiAutomationAgent(
 
         // 构建初始消息
         val history = mutableListOf<ChatRequestMessage>()
+        val systemPrompt =
+                PromptTemplates.buildSystemPrompt(
+                        screenW = screenW,
+                        screenH = screenH,
+                        config = null,
+                        enforceDesc = useThirdPartyApi
+                )
         history +=
                 ChatRequestMessage(
                         role = "system",
-                        content =
-                                PromptTemplates.buildSystemPrompt(
-                                        screenW = screenW,
-                                        screenH = screenH,
-                                        config = null,
-                                        enforceDesc = useThirdPartyApi
-                                )
+                        content = runtimeContext?.applyToSystemPrompt(systemPrompt) ?: systemPrompt
                 )
 
         // 清理缓存
@@ -211,8 +217,9 @@ class UiAutomationAgent(
         var step = 0
         var currentScreenW = screenW
         var currentScreenH = screenH
+        val maxSteps = runtimeContext?.resolveMaxSteps(config.maxSteps) ?: config.maxSteps
 
-        while (step < config.maxSteps) {
+        while (step < maxSteps) {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             awaitIfPaused(control)
             step++
@@ -232,7 +239,7 @@ class UiAutomationAgent(
             AutomationOverlay.updateProgress(
                     step = step,
                     phaseInStep = 0f,
-                    maxSteps = config.maxSteps,
+                    maxSteps = maxSteps,
                     subtitle = "读取界面"
             )
 
@@ -278,7 +285,7 @@ class UiAutomationAgent(
             AutomationOverlay.updateProgress(
                     step = step,
                     phaseInStep = 0.15f,
-                    maxSteps = config.maxSteps,
+                    maxSteps = maxSteps,
                     subtitle = "解析界面"
             )
 
@@ -333,7 +340,7 @@ class UiAutomationAgent(
             AutomationOverlay.updateProgress(
                     step = step,
                     phaseInStep = 0.25f,
-                    maxSteps = config.maxSteps,
+                    maxSteps = maxSteps,
                     subtitle = "请求模型"
             )
 
@@ -365,7 +372,7 @@ class UiAutomationAgent(
             AutomationOverlay.updateProgress(
                     step = step,
                     phaseInStep = 0.55f,
-                    maxSteps = config.maxSteps,
+                    maxSteps = maxSteps,
                     subtitle = "解析模型输出"
             )
 
@@ -413,11 +420,18 @@ class UiAutomationAgent(
                 )
             }
 
+            if (runtimeContext != null && !runtimeContext.isActionAllowed(action.actionName)) {
+                val actionName = action.actionName.orEmpty().ifBlank { "unknown" }
+                val allowed = runtimeContext.allowedActions.joinToString(", ")
+                onLog("[Step $step] Skill 限制：动作 $actionName 不在白名单内")
+                return AgentResult(false, "动作受技能限制: $actionName，允许动作: $allowed", step)
+            }
+
             // 更新进度
             AutomationOverlay.updateProgress(
                     step = step,
                     phaseInStep = 0.68f,
-                    maxSteps = config.maxSteps,
+                    maxSteps = maxSteps,
                     subtitle = "准备执行"
             )
 
@@ -440,7 +454,7 @@ class UiAutomationAgent(
                 AutomationOverlay.updateProgress(
                         step = step,
                         phaseInStep = 0.78f,
-                        maxSteps = config.maxSteps,
+                        maxSteps = maxSteps,
                         subtitle = overlayActionText
                 )
 
@@ -453,6 +467,48 @@ class UiAutomationAgent(
                 // Note/Call_api 处理
                 if (actionName == "note" || actionName == "call_api" || actionName == "interact") {
                     return AgentResult(false, "需要用户交互/扩展能力：${currentAction.raw.take(180)}", step)
+                }
+
+                // 模型可调用技能（通过提示词注入）
+                if (actionName == "call_skill") {
+                    val requestedSkill =
+                            currentAction.fields["skill"]
+                                    ?: currentAction.fields["skill_id"] ?: currentAction.fields["name"]
+                    val normalizedSkill =
+                            requestedSkill
+                                    ?.trim()
+                                    ?.trim('"', '\'', ' ')
+                                    ?.lowercase()
+                                    .orEmpty()
+                    if (normalizedSkill.isBlank()) {
+                        onLog("[Step $step] Skill 调用失败：缺少 skill 参数")
+                        execOk = false
+                    } else {
+                        onLog("[Step $step] 调用 Skill：$normalizedSkill")
+                        val skillResult = SkillCallRegistry.execute(normalizedSkill, appContext, service)
+                        if (skillResult.success) {
+                            val skillOutput =
+                                    buildString {
+                                        append("SKILL_OUTPUT:")
+                                        append(normalizedSkill)
+                                        append("\n")
+                                        append(skillResult.output.trim())
+                                    }
+                            history += ChatRequestMessage(role = "user", content = skillOutput)
+                            onLog("[Step $step] Skill 输出已回注：$normalizedSkill")
+                            lastActionWasTap = false
+                            lastTapAction = null
+                            execOk = true
+                        } else {
+                            onLog(
+                                    "[Step $step] Skill 调用失败：${skillResult.error.ifBlank { "unknown" }}"
+                            )
+                            execOk = false
+                        }
+                    }
+                    if (execOk) {
+                        break
+                    }
                 }
 
                 // Tap+Type 合并执行检测
@@ -546,7 +602,7 @@ class UiAutomationAgent(
                 AutomationOverlay.updateProgress(
                         step = step,
                         phaseInStep = 0.62f,
-                        maxSteps = config.maxSteps,
+                        maxSteps = maxSteps,
                         subtitle = "动作失败，修复中"
                 )
 
@@ -579,7 +635,7 @@ class UiAutomationAgent(
                 AutomationOverlay.updateProgress(
                         step = step,
                         phaseInStep = 0.72f,
-                        maxSteps = config.maxSteps,
+                        maxSteps = maxSteps,
                         subtitle = "解析修复动作"
                 )
 
@@ -613,6 +669,12 @@ class UiAutomationAgent(
                             step
                     )
                 }
+                if (runtimeContext != null && !runtimeContext.isActionAllowed(currentAction.actionName)) {
+                    val actionName = currentAction.actionName.orEmpty().ifBlank { "unknown" }
+                    val allowed = runtimeContext.allowedActions.joinToString(", ")
+                    onLog("[Step $step] Skill 限制：修复动作 $actionName 不在白名单内")
+                    return AgentResult(false, "修复动作受技能限制: $actionName，允许动作: $allowed", step)
+                }
             }
 
             // 计算延迟
@@ -622,7 +684,7 @@ class UiAutomationAgent(
             AutomationOverlay.updateProgress(
                     step = step,
                     phaseInStep = 0.92f,
-                    maxSteps = config.maxSteps,
+                    maxSteps = maxSteps,
                     subtitle = "等待界面稳定"
             )
 
@@ -639,7 +701,7 @@ class UiAutomationAgent(
             delay((config.stepDelayMs + extraDelayMs).coerceAtLeast(0L))
         }
 
-        return AgentResult(false, "达到最大步数限制（${config.maxSteps}）", config.maxSteps)
+        return AgentResult(false, "达到最大步数限制（$maxSteps）", maxSteps)
     } // end of run()
 
     /** 清理虚拟屏及预览悬浮窗资源 */
@@ -718,7 +780,23 @@ class UiAutomationAgent(
         try {
             if (service != null) {
                 val pm = service.packageManager
-                val intent = pm.getLaunchIntentForPackage(resolvedPackage)
+                var launchPackage = resolvedPackage
+                var intent = pm.getLaunchIntentForPackage(launchPackage)
+                if (intent == null) {
+                    val fallbackPackage =
+                            com.ai.phoneagent.core.tools.AppPackageManager.findBestInstalledPackageByQuery(
+                                    matchedAppName ?: task
+                            )
+                    if (!fallbackPackage.isNullOrBlank() && fallbackPackage != launchPackage) {
+                        val fallbackIntent = pm.getLaunchIntentForPackage(fallbackPackage)
+                        if (fallbackIntent != null) {
+                            onLog("[⚡快速启动] 启动入口回退：$launchPackage -> $fallbackPackage")
+                            launchPackage = fallbackPackage
+                            resolvedPackage = fallbackPackage
+                            intent = fallbackIntent
+                        }
+                    }
+                }
                 if (intent == null) {
                     onLog("[⚡快速启动] 未找到 ${matchedAppName}(${resolvedPackage}) 的启动入口")
                     return false
