@@ -39,12 +39,12 @@ class AriesAgentApp : Application() {
 
     companion object {
         private const val TAG = "AriesAgentApp"
-        
+
         @JvmStatic
         fun logi(msg: String) {
             android.util.Log.i(TAG, msg)
         }
-        
+
         @JvmStatic
         fun logw(msg: String, t: Throwable? = null) {
             if (t != null) android.util.Log.w(TAG, msg, t)
@@ -54,12 +54,12 @@ class AriesAgentApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        
+
+        // 跟随系统自动切换日夜模式
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+
         // 初始化全局上下文
         AppState.init(this)
-        
-        // 跟随系统深浅色（Material DayNight）
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
 
         // 初始化 HiddenApiBypass（虚拟屏创建必需）
         try {
@@ -98,3 +98,4 @@ object AppState {
     @JvmStatic
     fun getAppContext(): Context? = appContext
 }
+

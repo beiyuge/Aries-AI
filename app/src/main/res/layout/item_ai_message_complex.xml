@@ -3,20 +3,32 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp"
+    android:layout_marginTop="@dimen/m3t_spacing_sm"
     android:layout_marginEnd="0dp"
+    android:layout_marginBottom="@dimen/m3t_spacing_sm"
     android:background="@drawable/bg_glass_pane"
     android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/ai_author_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:letterSpacing="0.03"
+        android:text="Aries AI"
+        android:textColor="@color/m3t_primary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/thinking_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:background="@color/thinking_background"
+        android:layout_marginBottom="@dimen/m3t_spacing_sm"
+        android:background="@drawable/bg_thinking_panel"
         android:orientation="vertical"
-        android:padding="8dp"
+        android:padding="@dimen/m3t_spacing_sm"
         android:visibility="gone">
 
         <LinearLayout
@@ -28,21 +40,23 @@
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingBottom="4dp">
+            android:paddingBottom="@dimen/m3t_spacing_xs">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="已思考"
-                android:textAppearance="@style/TextAppearance.Aries.Thinking.Header" />
+                android:textAppearance="@style/TextAppearance.M3t.Chat.Thinking"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/thinking_indicator_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text=" ⌄"
-                android:textAppearance="@style/TextAppearance.Aries.Thinking.Header" />
+                android:layout_marginStart="@dimen/m3t_spacing_xs"
+                android:text=" ?"
+                android:textAppearance="@style/TextAppearance.M3t.Chat.Thinking"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout
@@ -55,54 +69,92 @@
             <View
                 android:layout_width="3dp"
                 android:layout_height="match_parent"
-                android:layout_marginEnd="8dp"
-                android:background="@color/m3_outline_variant" />
+                android:layout_marginEnd="@dimen/m3t_spacing_sm"
+                android:background="@drawable/bg_thinking_rail" />
 
             <TextView
                 android:id="@+id/thinking_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.4"
                 android:minHeight="24dp"
                 android:paddingTop="2dp"
                 android:paddingBottom="2dp"
                 android:text=""
-                android:textAppearance="@style/TextAppearance.Aries.Thinking.Content"
-                android:lineSpacingMultiplier="1.4" />
+                android:textAppearance="@style/TextAppearance.M3t.Chat.Thinking" />
         </LinearLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/ai_author_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
-        android:letterSpacing="0.03"
-        android:text="Aries AI"
-        android:textAppearance="@style/TextAppearance.Aries.Message.Author"
-        android:visibility="gone" />
 
     <TextView
         android:id="@+id/message_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="4dp"
-        android:textAppearance="@style/TextAppearance.Aries.Message.Content"
-        android:textIsSelectable="true"
-        android:lineSpacingMultiplier="1.5" />
+        android:lineSpacingMultiplier="1.5"
+        android:paddingTop="@dimen/m3t_spacing_xs"
+        android:textAppearance="@style/TextAppearance.M3t.Chat.Message"
+        android:textIsSelectable="true" />
+
+    <LinearLayout
+        android:id="@+id/automation_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/m3t_spacing_sm"
+        android:background="@drawable/bg_rounded_input_light"
+        android:orientation="vertical"
+        android:padding="@dimen/m3t_spacing_md"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/automation_panel_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/automation_scene_title"
+                android:textAppearance="@style/TextAppearance.M3t.Title.Medium" />
+
+            <TextView
+                android:id="@+id/automation_panel_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_action_button_oval"
+                android:paddingStart="@dimen/m3t_spacing_sm"
+                android:paddingTop="@dimen/m3t_spacing_xxxs"
+                android:paddingEnd="@dimen/m3t_spacing_sm"
+                android:paddingBottom="@dimen/m3t_spacing_xxxs"
+                android:text="@string/automation_scene_need_confirm"
+                android:textAppearance="@style/TextAppearance.M3t.Body.Small"
+                android:textColor="@color/m3t_message_action" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/automation_panel_command"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/m3t_spacing_sm"
+            android:textAppearance="@style/TextAppearance.M3t.Chat.Message"
+            android:textColor="@color/m3t_on_surface" />
+
+        <LinearLayout
+            android:id="@+id/automation_log_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/m3t_spacing_sm"
+            android:orientation="vertical" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/action_area"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/m3t_spacing_sm"
         android:orientation="vertical"
         android:visibility="gone">
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginBottom="4dp"
-            android:background="@color/m3_divider" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -118,53 +170,87 @@
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
+                android:paddingStart="@dimen/m3t_spacing_md"
+                android:paddingEnd="@dimen/m3t_spacing_md">
 
                 <ImageView
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_content_copy_24"
-                    app:tint="@color/m3_on_surface_variant" />
+                    app:tint="@color/m3t_message_action" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="@dimen/m3t_spacing_xs"
                     android:text="复制"
-                    android:textAppearance="@style/TextAppearance.Aries.Message.Action" />
+                    android:textColor="@color/m3t_message_action"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btn_retry"
                 android:layout_width="wrap_content"
                 android:layout_height="32dp"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/m3t_spacing_sm"
                 android:background="@drawable/bg_action_button_oval"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
+                android:paddingStart="@dimen/m3t_spacing_md"
+                android:paddingEnd="@dimen/m3t_spacing_md">
 
                 <ImageView
                     android:id="@+id/iv_retry_icon"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_refresh_24"
-                    app:tint="@color/m3_on_surface_variant" />
+                    app:tint="@color/m3t_message_action" />
 
                 <TextView
                     android:id="@+id/tv_retry_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
+                    android:layout_marginStart="@dimen/m3t_spacing_xs"
                     android:text="@string/retry"
-                    android:textAppearance="@style/TextAppearance.Aries.Message.Action" />
+                    android:textColor="@color/m3t_message_action"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btn_confirm"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_marginStart="@dimen/m3t_spacing_sm"
+                android:background="@drawable/bg_action_button_oval"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/m3t_spacing_md"
+                android:paddingEnd="@dimen/m3t_spacing_md"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/iv_confirm_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_check_circle_24"
+                    app:tint="@color/m3t_message_action" />
+
+                <TextView
+                    android:id="@+id/tv_confirm_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/m3t_spacing_xs"
+                    android:text="@string/automation_confirm"
+                    android:textColor="@color/m3t_message_action"
+                    android:textSize="12sp" />
             </LinearLayout>
 
         </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>
+
