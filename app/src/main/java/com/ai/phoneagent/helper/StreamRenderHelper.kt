@@ -23,22 +23,17 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.ai.phoneagent.R
-import com.ai.phoneagent.core.utils.ThinkingTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Aries AI 流式渲染助手
- *
- * 特点：
- * 1. 思考中：显示"思考中"，实时展示思考过程
- * 2. 已思考：思考结束后显示"已思考 (用时 X 秒)"
- * 3. 平滑打字机动画，避免界面抖动
+ * AI 流式消息渲染助手。
+ * - 流式阶段：限频纯文本刷新，避免抖动和卡顿
+ * - 完成阶段：一次性做完整 markdown/latex 渲染
  */
 object StreamRenderHelper {
 
@@ -55,51 +50,35 @@ object StreamRenderHelper {
         val copyButton: View?
     )
 
-    // 文本动画器（支持 Markdown 渲染）
+    /**
+     * 文本流式渲染器：对 setText 做限频，减少重排和滚动闪烁。
+     */
     private class TextAnimator(
         textView: TextView,
         private val scope: CoroutineScope,
         private val onUpdate: () -> Unit,
-        val useMarkdown: Boolean = false  // 添加 val 使其可访问
+        val useMarkdown: Boolean = false
     ) {
         private val viewRef = WeakReference(textView)
         private val textBuilder = StringBuilder()
-        private var job: Job? = null
-        private var displayedLength = 0
+        private var renderJob: Job? = null
+        private var lastRenderAtMs = 0L
 
         fun append(delta: String) {
+            if (delta.isEmpty()) return
             synchronized(textBuilder) {
                 textBuilder.append(delta)
             }
-            
-            // 立即更新显示（不等待动画循环）
-            val view = viewRef.get()
-            if (view != null) {
-                val currentText = synchronized(textBuilder) { textBuilder.toString() }
-                if (useMarkdown) {
-                    view.text = SimpleMarkdownRenderer.render(currentText)
-                } else {
-                    view.text = currentText
-                }
-                displayedLength = currentText.length
-            }
-            
-            startAnimation()
+            scheduleRender()
         }
 
         fun setFullText(text: String) {
-            job?.cancel()
+            renderJob?.cancel()
             synchronized(textBuilder) {
                 textBuilder.clear()
                 textBuilder.append(text)
             }
-            val view = viewRef.get() ?: return
-            if (useMarkdown) {
-                view.text = SimpleMarkdownRenderer.render(text)
-            } else {
-                view.text = text
-            }
-            displayedLength = text.length
+            renderNow(notifyScroll = true)
         }
 
         fun getText(): String = synchronized(textBuilder) { textBuilder.toString() }
@@ -108,78 +87,67 @@ object StreamRenderHelper {
             if (delta.isEmpty()) return
             synchronized(textBuilder) {
                 textBuilder.append(delta)
-                displayedLength = textBuilder.length
             }
         }
-        
+
         fun clear() {
-            job?.cancel()
+            renderJob?.cancel()
             synchronized(textBuilder) {
                 textBuilder.clear()
             }
-            displayedLength = 0
             val view = viewRef.get() ?: return
             view.text = ""
         }
 
-        private fun startAnimation() {
-            if (job?.isActive == true) return
+        fun stop() {
+            renderJob?.cancel()
+            renderNow(notifyScroll = false)
+        }
 
-            job = scope.launch {
-                while (isActive) {
-                    val target = synchronized(textBuilder) { textBuilder.toString() }
-                    val targetLen = target.length
+        private fun scheduleRender() {
+            val now = System.currentTimeMillis()
+            val elapsed = now - lastRenderAtMs
+            if (elapsed >= RENDER_INTERVAL_MS) {
+                renderJob?.cancel()
+                renderNow(notifyScroll = true)
+                return
+            }
+            if (renderJob?.isActive == true) return
 
-                    if (displayedLength >= targetLen) {
-                        // 再检查一次，防止并发问题
-                        if (synchronized(textBuilder) { textBuilder.length } == targetLen) {
-                            break
-                        }
-                        continue
-                    }
-
-                    val view = viewRef.get() ?: break
-
-                    // 计算步长（堆积多时加速）
-                    val remaining = targetLen - displayedLength
-                    val step = when {
-                        remaining > 100 -> 15
-                        remaining > 50 -> 8
-                        remaining > 20 -> 4
-                        else -> 1
-                    }
-
-                    val nextLen = (displayedLength + step).coerceAtMost(targetLen)
-                    val displayText = target.substring(0, nextLen)
-                    
-                    // 应用 Markdown 渲染
-                    if (useMarkdown) {
-                        view.text = SimpleMarkdownRenderer.render(displayText)
-                    } else {
-                        view.text = displayText
-                    }
-                    displayedLength = nextLen
-                    
-                    view.post { onUpdate() }
-                    delay(16L)
-                }
+            val waitMs = (RENDER_INTERVAL_MS - elapsed).coerceAtLeast(0L)
+            renderJob = scope.launch {
+                delay(waitMs)
+                renderNow(notifyScroll = true)
             }
         }
 
-        fun stop() {
-            job?.cancel()
-            val finalText = synchronized(textBuilder) { textBuilder.toString() }
+        private fun renderNow(notifyScroll: Boolean) {
             val view = viewRef.get() ?: return
-            if (useMarkdown) {
-                view.text = SimpleMarkdownRenderer.render(finalText)
-            } else {
-                view.text = finalText
+            val currentText = synchronized(textBuilder) { textBuilder.toString() }
+            applyText(view, currentText)
+            lastRenderAtMs = System.currentTimeMillis()
+            if (notifyScroll) {
+                view.post { onUpdate() }
             }
-            displayedLength = finalText.length
+        }
+
+        private fun applyText(view: TextView, text: String) {
+            if (!useMarkdown) {
+                view.text = text
+                return
+            }
+            try {
+                MarkdownRenderer.getInstance(view.context).render(view, text)
+            } catch (_: Throwable) {
+                view.text = SimpleMarkdownRenderer.render(text)
+            }
+        }
+
+        companion object {
+            private const val RENDER_INTERVAL_MS = 48L
         }
     }
 
-    // 缓存
     private val animators = ConcurrentHashMap<Int, TextAnimator>()
     private val parsers = ConcurrentHashMap<Int, AriesStreamParser>()
     private var thinkingStartTime = 0L
@@ -199,48 +167,36 @@ object StreamRenderHelper {
         )
     }
 
-    /**
-     * 初始化思考状态
-     */
     fun initThinkingState(vh: ViewHolder) {
         val viewId = vh.hashCode()
-        
-        // 1. 先清理旧资源（包括清除缓存的 animators）
+
         cleanup(vh)
-        
-        // 2. 强制清空 UI（防止 animator 缓存问题）
+
         vh.thinkingText.text = ""
         vh.messageContent.text = ""
-        
-        // 3. 记录开始时间
+
         thinkingStartTime = System.currentTimeMillis()
-        
-        // 4. 初始化新的解析器
         parsers[viewId] = AriesStreamParser()
-        
-        // 5. 设置 UI 状态
+
         vh.authorName.visibility = View.VISIBLE
         vh.thinkingLayout.visibility = View.VISIBLE
         vh.thinkingLayout.alpha = 1f
         vh.actionArea.visibility = View.GONE
 
-        // 显示"思考中"
         val headerTitle = vh.thinkingHeader.getChildAt(0) as? TextView
         headerTitle?.text = "思考中"
-        
-        // 思考区域初始展开
+
         vh.thinkingText.visibility = View.VISIBLE
         vh.thinkingContentArea.visibility = View.VISIBLE
-        vh.thinkingIndicator.text = " ⌄"
-        
-        // 设置折叠逻辑（只设置一次）
+        vh.thinkingIndicator.text = " ▼"
+
         if (vh.thinkingHeader.tag != "listener_set") {
             var expanded = true
             vh.thinkingHeader.setOnClickListener {
                 expanded = !expanded
                 vh.thinkingText.visibility = if (expanded) View.VISIBLE else View.GONE
                 vh.thinkingContentArea.visibility = if (expanded) View.VISIBLE else View.GONE
-                vh.thinkingIndicator.text = if (expanded) " ⌄" else " ›"
+                vh.thinkingIndicator.text = if (expanded) " ▼" else " ▶"
             }
             vh.thinkingHeader.tag = "listener_set"
         }
@@ -257,11 +213,9 @@ object StreamRenderHelper {
         useMarkdown: Boolean = false
     ): TextAnimator {
         val id = textView.hashCode()
-        
-        // 检查现有 animator
+
         val existing = animators[id]
         if (existing != null) {
-            // 如果 useMarkdown 参数不匹配，先移除旧的，创建新的
             if (existing.useMarkdown != useMarkdown) {
                 existing.stop()
                 animators.remove(id)
@@ -269,17 +223,12 @@ object StreamRenderHelper {
                 return existing
             }
         }
-        
-        // 创建新的 animator
+
         val newAnimator = TextAnimator(textView, scope, onScroll, useMarkdown)
         animators[id] = newAnimator
         return newAnimator
     }
 
-    /**
-     * 处理 reasoning_content 增量（来自 API 的思考字段）
-     * 注意：此方法专门处理 API 返回的 reasoning_content 字段，直接追加到思考区域
-     */
     fun processReasoningDelta(
         vh: ViewHolder,
         delta: String,
@@ -287,40 +236,33 @@ object StreamRenderHelper {
         onScroll: () -> Unit
     ) {
         if (delta.isEmpty()) return
-        
-        // 强制确保思考区域可见并展开
+
         vh.thinkingLayout.visibility = View.VISIBLE
         vh.thinkingLayout.alpha = 1f
         vh.thinkingText.visibility = View.VISIBLE
         vh.thinkingContentArea.visibility = View.VISIBLE
-        
+
         val parser = getParser(vh)
         parser.processReasoningDelta(delta)
-        
-        // 追加到思考区域，使用 Markdown 渲染
-        val animator = getAnimator(vh.thinkingText, coroutineScope, onScroll, useMarkdown = true)
+
+        // 思考阶段不渲染 LaTeX，保持可读和稳定滚动。
+        val animator = getAnimator(vh.thinkingText, coroutineScope, onScroll, useMarkdown = false)
         animator.append(delta)
-        
-        // 立即刷新显示（调试用）
-        vh.thinkingText.post { onScroll() }
     }
 
-    /**
-     * 处理 content 增量
-     * 注意：此方法处理 API 返回的 content 字段，会智能解析其中的思考/回答标签
-     */
+    @Suppress("UNUSED_PARAMETER")
     fun processContentDelta(
         vh: ViewHolder,
         delta: String,
         coroutineScope: CoroutineScope,
         context: Context,
         onScroll: () -> Unit,
-        onPhaseChange: (Boolean) -> Unit  // true = 进入回答阶段
+        onPhaseChange: (Boolean) -> Unit
     ) {
         if (delta.isEmpty()) return
 
-        // 直接采用模型 content 流：不对实时流做标签拆分，避免“先解析后显示”导致正文丢失。
-        val answerAnimator = getAnimator(vh.messageContent, coroutineScope, onScroll, useMarkdown = true)
+        // 正文流式阶段只做纯文本，结束后再统一做 markdown/latex 渲染。
+        val answerAnimator = getAnimator(vh.messageContent, coroutineScope, onScroll, useMarkdown = false)
         val isFirstAnswerChunk = answerAnimator.getText().isEmpty()
         if (isFirstAnswerChunk) {
             onPhaseChange(true)
@@ -328,18 +270,12 @@ object StreamRenderHelper {
         answerAnimator.append(delta)
     }
 
-    /**
-     * 从"思考中"过渡到"已思考"
-     */
     fun transitionToAnswer(vh: ViewHolder) {
-        // 计算思考耗时
         val elapsed = (System.currentTimeMillis() - thinkingStartTime) / 1000
-        
-        // 更新标题
+
         val headerTitle = vh.thinkingHeader.getChildAt(0) as? TextView
-        headerTitle?.text = "已思考 (用时 ${elapsed} 秒)"
-        
-        // 思考区域变淡
+        headerTitle?.text = "已思考(用时 ${elapsed} 秒)"
+
         vh.thinkingLayout.animate()
             .alpha(0.85f)
             .setDuration(300)
@@ -347,27 +283,22 @@ object StreamRenderHelper {
             .start()
     }
 
-    /**
-     * 标记完成
-     */
     fun markCompleted(vh: ViewHolder, timeCostSec: Long) {
         val headerTitle = vh.thinkingHeader.getChildAt(0) as? TextView
-        headerTitle?.text = "已思考 (用时 ${timeCostSec} 秒)"
-        
-        // 显示操作按钮
+        headerTitle?.text = "已思考(用时 ${timeCostSec} 秒)"
+
         vh.actionArea.visibility = View.VISIBLE
         vh.actionArea.alpha = 0f
         vh.actionArea.animate()
             .alpha(1f)
             .setDuration(300)
             .start()
-        
-        // 停止动画，确保完整显示
+
         val thinkingAnimator = animators[vh.thinkingText.hashCode()]
         val answerAnimator = animators[vh.messageContent.hashCode()]
         thinkingAnimator?.stop()
         answerAnimator?.stop()
-        // 刷新解析器缓冲
+
         val flushedChunks = parsers[vh.hashCode()]?.flush().orEmpty()
         val extraThinking = StringBuilder()
         val extraAnswer = StringBuilder()
@@ -386,60 +317,54 @@ object StreamRenderHelper {
 
         val thinkingRaw = thinkingAnimator?.getText() ?: extraThinkingStr
         val answerRaw = answerAnimator?.getText() ?: extraAnswerStr
+
         vh.thinkingLayout.visibility = if (thinkingRaw.isBlank()) View.GONE else View.VISIBLE
         if (thinkingRaw.isNotBlank()) {
-            applyMarkdownToHistory(vh.thinkingText, thinkingRaw)
+            applyPlainMarkdownToHistory(vh.thinkingText, thinkingRaw)
         }
         if (answerRaw.isNotBlank()) {
             applyMarkdownToHistory(vh.messageContent, answerRaw)
         }
     }
 
-    /**
-     * 获取思考文本
-     */
     fun getThinkingText(vh: ViewHolder): String {
         val animatorText = animators[vh.thinkingText.hashCode()]?.getText().orEmpty()
         if (animatorText.isNotBlank()) return animatorText
         return vh.thinkingText.text?.toString().orEmpty()
     }
 
-    /**
-     * 获取回答文本
-     */
     fun getAnswerText(vh: ViewHolder): String {
         val animatorText = animators[vh.messageContent.hashCode()]?.getText().orEmpty()
         if (animatorText.isNotBlank()) return animatorText
         return vh.messageContent.text?.toString().orEmpty()
     }
 
-    /**
-     * 清理资源
-     */
     fun cleanup(vh: ViewHolder) {
         val thinkingId = vh.thinkingText.hashCode()
         val contentId = vh.messageContent.hashCode()
-        
-        // 停止并清空 animator
+
         animators[thinkingId]?.clear()
         animators[contentId]?.clear()
-        
-        // 移除缓存
+
         animators.remove(thinkingId)
         animators.remove(contentId)
         parsers.remove(vh.hashCode())
     }
-    
-    /**
-     * 为历史消息应用 Markdown 渲染
-     * 用于加载历史对话时渲染已保存的消息
-     */
+
     fun applyMarkdownToHistory(textView: TextView, content: String) {
         if (content.isBlank()) {
             textView.text = ""
             return
         }
         MarkdownRenderer.getInstance(textView.context).render(textView, content)
+    }
+
+    fun applyPlainMarkdownToHistory(textView: TextView, content: String) {
+        if (content.isBlank()) {
+            textView.text = ""
+            return
+        }
+        textView.text = SimpleMarkdownRenderer.render(content)
     }
 
     private fun sanitizeFlushTail(tail: String): String {
@@ -451,20 +376,21 @@ object StreamRenderHelper {
             core = core.dropLast(whitespaceSuffix.length)
         }
 
-        val tags = listOf(
-            "【思考开始】",
-            "【思考结束】",
-            "【思考】",
-            "【回答开始】",
-            "【回答结束】",
-            "【回答】",
-            "<think>",
-            "</think>",
-            "<思考>",
-            "</思考>",
-            "<思考：",
-            "<思考:"
-        )
+        val tags =
+            listOf(
+                "【思考开始】",
+                "【思考结束】",
+                "【思考】",
+                "【回答开始】",
+                "【回答结束】",
+                "【回答】",
+                "<think>",
+                "</think>",
+                "<思考>",
+                "</思考>",
+                "<思考：",
+                "<思考"
+            )
 
         for (tag in tags) {
             core = core.replace(tag, "")

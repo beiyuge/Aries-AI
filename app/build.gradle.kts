@@ -143,6 +143,8 @@ dependencies {
     implementation("io.noties.markwon:core:4.6.2")
     implementation("io.noties.markwon:ext-strikethrough:4.6.2")
     implementation("io.noties.markwon:ext-tables:4.6.2")
+    implementation("io.noties.markwon:inline-parser:4.6.2")
+    implementation("io.noties.markwon:ext-latex:4.6.2")
     implementation("io.noties.markwon:syntax-highlight:4.6.2")
 
     // 显式添加单一版本的 annotations，供 Kotlin/Markwon 等使用

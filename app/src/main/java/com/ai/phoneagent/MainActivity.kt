@@ -246,6 +246,12 @@ class MainActivity : AppCompatActivity() {
     private var swipeStartY = 0f
     private var swipeTracking = false
     private var originalContentTopPadding = 0
+    @Volatile private var isUserTouchingMessageList = false
+    @Volatile private var streamAutoFollowEnabled = true
+    private var messageTouchStartY = 0f
+    private var messageTouchMoved = false
+    private val messageFollowDisableThresholdPx by lazy { 18f * resources.displayMetrics.density }
+    @Volatile private var lastAutoScrollAtMs = 0L
     
     // 小窗模式相关
     private var isAnimatingToMiniWindow = false
@@ -456,6 +462,7 @@ class MainActivity : AppCompatActivity() {
         restoreApiKey()
 
         setupKeyboardListener()
+        setupMessageListTouchTracking()
 
         elevateAiBar()
 
@@ -2730,7 +2737,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, "已复制内容", Toast.LENGTH_SHORT).show()
                 }
 
-                smoothScrollToBottom()
+                smoothScrollToBottom(force = true)
 
                 // 临时变量用于构建完整内容以方便保存
                 val reasoningSb = StringBuilder()
@@ -3846,7 +3853,7 @@ class MainActivity : AppCompatActivity() {
 
         if (!animate || !automationCommandText.isNullOrBlank()) {
             if (!thinkContent.isNullOrBlank()) {
-                StreamRenderHelper.applyMarkdownToHistory(thinkingText, thinkContent)
+                StreamRenderHelper.applyPlainMarkdownToHistory(thinkingText, thinkContent)
                 if (thinkingText.visibility == View.VISIBLE) {
                     thinkingHeader.performClick()
                 }
@@ -3982,22 +3989,73 @@ class MainActivity : AppCompatActivity() {
     }
     
     /**
+     * 监听消息区域触摸，用户手动滚动时暂停自动跟随到底部。
+     */
+    private fun setupMessageListTouchTracking() {
+        binding.scrollArea.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    isUserTouchingMessageList = true
+                    messageTouchStartY = event.rawY
+                    messageTouchMoved = false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    isUserTouchingMessageList = true
+                    val deltaY = event.rawY - messageTouchStartY
+                    val movedDistance = kotlin.math.abs(deltaY)
+                    if (movedDistance >= messageFollowDisableThresholdPx) {
+                        messageTouchMoved = true
+                        streamAutoFollowEnabled = false
+                    }
+                }
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_CANCEL -> {
+                    isUserTouchingMessageList = false
+                    val scrollView = binding.messagesContainer.parent as? android.widget.ScrollView
+                    if (scrollView != null) {
+                        val viewHeight = binding.messagesContainer.height
+                        val scrollViewHeight = scrollView.height
+                        val scrollY = scrollView.scrollY
+                        val distanceToBottom = viewHeight - (scrollY + scrollViewHeight)
+                        if (distanceToBottom <= 24) {
+                            streamAutoFollowEnabled = true
+                        } else if (messageTouchMoved) {
+                            streamAutoFollowEnabled = false
+                        }
+                    }
+                    messageTouchMoved = false
+                }
+            }
+            false
+        }
+    }
+
+    /**
      * 丝滑滚动到底部
      */
-    private fun smoothScrollToBottom() {
+    private fun smoothScrollToBottom(force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastAutoScrollAtMs < 48L) return
+        if (force) {
+            streamAutoFollowEnabled = true
+        } else if (isUserTouchingMessageList || !streamAutoFollowEnabled) {
+            return
+        }
         binding.messagesContainer.post {
             val scrollView = binding.messagesContainer.parent as? android.widget.ScrollView ?: return@post
             // 检查是否需要滚动：如果已经在底部附近，则跟随滚动
             val viewHeight = binding.messagesContainer.height
             val scrollViewHeight = scrollView.height
             val scrollY = scrollView.scrollY
+            val targetY = (viewHeight - scrollViewHeight).coerceAtLeast(0)
             
-            // 容差值，判定是否在底部
-            val isAtBottom = (viewHeight - (scrollY + scrollViewHeight)) < 300 
-            
-            // 强制滚动，或者仅当用户没往回滚时滚动？
-            // 用户要求“同步下移”，通常是强制跟随。
-            scrollView.smoothScrollTo(0, viewHeight)
+            // 自动跟随开启时，持续跟随到底部；用户上滑后会关闭该开关。
+            if (force || streamAutoFollowEnabled) {
+                if (kotlin.math.abs(targetY - scrollY) > 3) {
+                    scrollView.scrollTo(0, targetY)
+                }
+                lastAutoScrollAtMs = now
+            }
         }
     }
 

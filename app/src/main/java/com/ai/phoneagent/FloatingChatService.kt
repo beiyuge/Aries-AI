@@ -1546,7 +1546,7 @@ class FloatingChatService : Service() {
                     vh.thinkingIndicator.text = if (expanded) " ⌄" else " ›"
                 }
 
-                StreamRenderHelper.applyMarkdownToHistory(vh.thinkingText, thinkContent)
+                StreamRenderHelper.applyPlainMarkdownToHistory(vh.thinkingText, thinkContent)
             } else {
                 vh.thinkingLayout.visibility = View.GONE
             }
