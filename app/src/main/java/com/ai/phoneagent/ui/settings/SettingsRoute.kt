@@ -153,6 +153,7 @@ fun SettingsRoute(
                     showAriesApiSection = viewModel.showAriesApiSection,
                     ariesLoggedInUser = viewModel.ariesLoggedInUser,
                     ariesSelectedModel = viewModel.ariesSelectedModel,
+                    aipingLoggedInUser = viewModel.aipingLoggedInUser,
                     onChangeAriesModel = { viewModel.openAriesModelSelectionDialog() },
                     onBack = { viewModel.openHomePage() },
                     onApiModeChange = { mode ->
@@ -178,6 +179,26 @@ fun SettingsRoute(
                     onAriesLogout = {
                         viewModel.ariesLogout()
                         Toast.makeText(context, context.getString(com.ai.phoneagent.R.string.aries_logout_success), Toast.LENGTH_SHORT).show()
+                    },
+                    onAipingLoginClick = {
+                        val activity = context as? Activity
+                        if (activity == null) {
+                            Toast.makeText(
+                                context,
+                                context.getString(com.ai.phoneagent.R.string.settings_model_api_aiping_login_failed, ""),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            viewModel.submitAipingLogin(
+                                activity = activity,
+                                onSuccess = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() },
+                                onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() },
+                            )
+                        }
+                    },
+                    onAipingLogout = {
+                        viewModel.aipingLogout()
+                        Toast.makeText(context, context.getString(com.ai.phoneagent.R.string.settings_model_api_aiping_logout), Toast.LENGTH_SHORT).show()
                     },
                     onApiBaseUrlChange = { value -> viewModel.onApiBaseUrlChange(value) },
                     onApiModelChange = { value -> viewModel.onApiModelChange(value) },

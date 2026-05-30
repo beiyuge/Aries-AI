@@ -1199,6 +1199,9 @@ class AutomationViewModel(
         if (appPrefsRepository.getUseAriesApiBlocking()) {
             return appPrefsRepository.getActiveAriesApiKeyBlocking()
         }
+        if (appPrefsRepository.getUseAipingApiBlocking()) {
+            return appPrefsRepository.getAipingApiKeyBlocking()
+        }
         val key = appPrefsRepository.getApiKeyBlocking()
         if (key.isNotBlank()) return key
         return appPrefsRepository.getAutoglmApiKeyBlocking()
@@ -1212,10 +1215,11 @@ class AutomationViewModel(
         if (appPrefsRepository.getUseAriesApiBlocking()) {
             return AriesApiClient.ARIES_API_V1_BASE_URL
         }
+        val useAipingApi = appPrefsRepository.getUseAipingApiBlocking()
         val useThirdParty = appPrefsRepository.getApiUseThirdPartyBlocking()
         val useLocalModel = appPrefsRepository.getApiUseLocalModelBlocking()
         if (useLocalModel) return AutoGlmClient.DEFAULT_BASE_URL
-        if (!useThirdParty) return AutoGlmClient.DEFAULT_BASE_URL
+        if (!useThirdParty && !useAipingApi) return AutoGlmClient.DEFAULT_BASE_URL
         val rawUrl = appPrefsRepository.getApiThirdPartyBaseUrlBlocking().trim()
         return rawUrl.ifBlank { AutoGlmClient.DEFAULT_BASE_URL }
     }
@@ -1226,8 +1230,9 @@ class AutomationViewModel(
         }
         val useLocalModel = appPrefsRepository.getApiUseLocalModelBlocking()
         val useThirdParty = appPrefsRepository.getApiUseThirdPartyBlocking()
+        val useAipingApi = appPrefsRepository.getUseAipingApiBlocking()
         if (useLocalModel) return ModelScopeModelDownloader.QWEN35_MODEL_NAME
-        if (!useThirdParty) return AutoGlmClient.PHONE_MODEL
+        if (!useThirdParty && !useAipingApi) return AutoGlmClient.PHONE_MODEL
 
         val rawModel = appPrefsRepository.getApiThirdPartyModelBlocking().trim()
         return rawModel.ifBlank { AutoGlmClient.DEFAULT_MODEL }

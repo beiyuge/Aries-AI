@@ -41,10 +41,13 @@ class AppPreferencesRepository(
         val qwenPendingDownloadIds = stringSetPreferencesKey("qwen_pending_download_ids")
         
         val useAriesApi = booleanPreferencesKey("use_aries_api")
+        val useAipingApi = booleanPreferencesKey("use_aiping_api")
         val ariesApiSectionUnlocked = booleanPreferencesKey("aries_api_section_unlocked")
         val ariesLoggedInUser = stringPreferencesKey("aries_logged_in_user")
         val ariesSelectedModel = stringPreferencesKey("aries_selected_model")
         val ariesApiKey = stringPreferencesKey("aries_api_key")
+        val aipingLoggedInUser = stringPreferencesKey("aiping_logged_in_user")
+        val aipingApiKey = stringPreferencesKey("aiping_api_key")
 
         // ─── Appearance preferences ──────────────────────────────────────────
         val themeMode = stringPreferencesKey("theme_mode")
@@ -84,6 +87,11 @@ class AppPreferencesRepository(
             prefs[Keys.useAriesApi] ?: false
         }
 
+    val useAipingApiFlow: Flow<Boolean> =
+        context.appPreferencesDataStore.data.map { prefs ->
+            prefs[Keys.useAipingApi] ?: false
+        }
+
     val ariesApiSectionUnlockedFlow: Flow<Boolean> =
         context.appPreferencesDataStore.data.map { prefs ->
             prefs[Keys.ariesApiSectionUnlocked] ?: false
@@ -102,6 +110,16 @@ class AppPreferencesRepository(
     val ariesApiKeyFlow: Flow<String> =
         context.appPreferencesDataStore.data.map { prefs ->
             prefs[Keys.ariesApiKey] ?: ""
+        }
+
+    val aipingLoggedInUserFlow: Flow<String> =
+        context.appPreferencesDataStore.data.map { prefs ->
+            prefs[Keys.aipingLoggedInUser] ?: ""
+        }
+
+    val aipingApiKeyFlow: Flow<String> =
+        context.appPreferencesDataStore.data.map { prefs ->
+            prefs[Keys.aipingApiKey] ?: ""
         }
 
     val apiThirdPartyBaseUrlFlow: Flow<String> =
@@ -220,6 +238,12 @@ class AppPreferencesRepository(
         }
     }
 
+    suspend fun setUseAipingApi(value: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.useAipingApi] = value
+        }
+    }
+
     suspend fun setAriesApiSectionUnlocked(value: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.ariesApiSectionUnlocked] = value
@@ -265,6 +289,30 @@ class AppPreferencesRepository(
     suspend fun getAriesApiKey(): String {
         val prefs = context.appPreferencesDataStore.data.first()
         return prefs[Keys.ariesApiKey] ?: ""
+    }
+
+    suspend fun setAipingLoggedInUser(value: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            if (value.isBlank()) prefs.remove(Keys.aipingLoggedInUser)
+            else prefs[Keys.aipingLoggedInUser] = value
+        }
+    }
+
+    suspend fun getAipingLoggedInUser(): String {
+        val prefs = context.appPreferencesDataStore.data.first()
+        return prefs[Keys.aipingLoggedInUser] ?: ""
+    }
+
+    suspend fun setAipingApiKey(value: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            if (value.isBlank()) prefs.remove(Keys.aipingApiKey)
+            else prefs[Keys.aipingApiKey] = value
+        }
+    }
+
+    suspend fun getAipingApiKey(): String {
+        val prefs = context.appPreferencesDataStore.data.first()
+        return prefs[Keys.aipingApiKey] ?: ""
     }
 
     suspend fun getActiveAriesApiKey(): String {
@@ -534,6 +582,9 @@ class AppPreferencesRepository(
     fun getUseAriesApiBlocking(): Boolean = runBlocking {
         context.appPreferencesDataStore.data.first()[Keys.useAriesApi] ?: false
     }
+    fun getUseAipingApiBlocking(): Boolean = runBlocking {
+        context.appPreferencesDataStore.data.first()[Keys.useAipingApi] ?: false
+    }
     fun getAriesApiSectionUnlockedBlocking(): Boolean = runBlocking { getAriesApiSectionUnlocked() }
     fun setAriesApiSectionUnlockedBlocking(value: Boolean) = runBlocking { setAriesApiSectionUnlocked(value) }
     fun getAriesLoggedInUserBlocking(): String = runBlocking { getAriesLoggedInUser() }
@@ -543,6 +594,10 @@ class AppPreferencesRepository(
     fun getAriesApiKeyBlocking(): String = runBlocking { getAriesApiKey() }
     fun setAriesApiKeyBlocking(value: String) = runBlocking { setAriesApiKey(value) }
     fun getActiveAriesApiKeyBlocking(): String = runBlocking { getActiveAriesApiKey() }
+    fun getAipingLoggedInUserBlocking(): String = runBlocking { getAipingLoggedInUser() }
+    fun setAipingLoggedInUserBlocking(value: String) = runBlocking { setAipingLoggedInUser(value) }
+    fun getAipingApiKeyBlocking(): String = runBlocking { getAipingApiKey() }
+    fun setAipingApiKeyBlocking(value: String) = runBlocking { setAipingApiKey(value) }
     fun getApiThirdPartyBaseUrlBlocking(): String = runBlocking {
         context.appPreferencesDataStore.data.first()[Keys.apiThirdPartyBaseUrl] ?: ""
     }
@@ -571,6 +626,7 @@ class AppPreferencesRepository(
     fun setApiUseThirdPartyBlocking(value: Boolean) = runBlocking { setApiUseThirdParty(value) }
     fun setApiUseLocalModelBlocking(value: Boolean) = runBlocking { setApiUseLocalModel(value) }
     fun setUseAriesApiBlocking(value: Boolean) = runBlocking { setUseAriesApi(value) }
+    fun setUseAipingApiBlocking(value: Boolean) = runBlocking { setUseAipingApi(value) }
     fun setApiThirdPartyBaseUrlBlocking(value: String) = runBlocking { setApiThirdPartyBaseUrl(value) }
     fun setApiThirdPartyModelBlocking(value: String) = runBlocking { setApiThirdPartyModel(value) }
     fun setApiLastCheckKeyBlocking(value: String) = runBlocking { setApiLastCheckKey(value) }

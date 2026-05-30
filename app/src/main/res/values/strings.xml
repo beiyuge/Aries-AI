@@ -312,6 +312,16 @@
     <string name="settings_model_api_mode_official_description">使用内置官方接入路径，适合直接填写智谱 API Key 后快速开始。</string>
     <string name="settings_model_api_mode_third_party">第三方兼容 API</string>
     <string name="settings_model_api_mode_third_party_description">接入 OpenAI 兼容服务时，可单独配置 Base URL 与模型名称。</string>
+    <string name="settings_model_api_aiping_login">AI Ping 通行证</string>
+    <string name="settings_model_api_aiping_login_description">使用 AiPing 提供的模型路由服务。</string>
+    <string name="settings_model_api_aiping_login_button">登录 AI Ping 账号</string>
+    <string name="settings_model_api_aiping_ready">AI Ping 账号已就绪</string>
+    <string name="settings_model_api_aiping_login_required">请先登录 AI Ping 通行证</string>
+    <string name="settings_model_api_aiping_logout">退出 AI Ping 账号</string>
+    <string name="settings_model_api_aiping_logged_in">已登录：%1$s</string>
+    <string name="settings_model_api_aiping_config_missing">请先配置 AI Ping Logto connector target</string>
+    <string name="settings_model_api_aiping_login_success">AI Ping 已登录：%1$s</string>
+    <string name="settings_model_api_aiping_login_failed">AI Ping 登录失败：%1$s</string>
     <string name="settings_model_api_mode_local">本地模型优先</string>
     <string name="settings_model_api_mode_local_description">优先走本地模型链路，适合离线或自建推理场景。</string>
     <string name="settings_model_api_remote_title">远程 API</string>

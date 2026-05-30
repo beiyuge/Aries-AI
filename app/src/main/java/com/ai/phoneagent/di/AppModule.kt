@@ -18,6 +18,7 @@
 package com.ai.phoneagent.di
 
 import com.ai.phoneagent.AppState
+import com.ai.phoneagent.net.AipingLogtoAuthManager
 import com.ai.phoneagent.net.AriesOidcAuthManager
 import com.ai.phoneagent.telemetry.TelemetryHeartbeatManager
 import org.koin.android.ext.koin.androidApplication
@@ -39,6 +40,7 @@ val appModule = module {
     // AppState is a Kotlin object (singleton); bind it so Koin-injected code can resolve it.
     single { AppState }
     single { AriesOidcAuthManager(androidApplication()) }
+    single { AipingLogtoAuthManager(androidApplication()) }
     single { TelemetryHeartbeatManager(androidApplication(), get(), get(), get()) }
 
     // TODO(T3): Uncomment once ConversationManager is extracted from object/singleton:

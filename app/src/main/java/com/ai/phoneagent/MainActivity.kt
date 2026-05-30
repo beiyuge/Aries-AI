@@ -573,6 +573,7 @@ class MainActivity : AppCompatActivity() {
     private var useThirdPartyApi by mutableStateOf(false)
     private var useLocalModel by mutableStateOf(false)
     private var useAriesApi by mutableStateOf(false)
+    private var useAipingApi by mutableStateOf(false)
     private var apiBaseUrl by mutableStateOf(AutoGlmClient.DEFAULT_BASE_URL)
     private var apiModel by mutableStateOf(AutoGlmClient.DEFAULT_MODEL)
     private var ariesSelectedModel by mutableStateOf("")
@@ -698,6 +699,8 @@ class MainActivity : AppCompatActivity() {
             val currentUseThirdParty by appPrefsRepository.apiUseThirdPartyFlow.collectAsState(initial = false)
             val currentUseLocalModel by appPrefsRepository.apiUseLocalModelFlow.collectAsState(initial = false)
             val currentUseAriesApi by appPrefsRepository.useAriesApiFlow.collectAsState(initial = false)
+            val currentUseAipingApi by appPrefsRepository.useAipingApiFlow.collectAsState(initial = false)
+            val currentAipingApiKey by appPrefsRepository.aipingApiKeyFlow.collectAsState(initial = "")
             val currentApiBaseUrl by appPrefsRepository.apiThirdPartyBaseUrlFlow.collectAsState(initial = "")
             val currentApiModel by appPrefsRepository.apiThirdPartyModelFlow.collectAsState(initial = "")
             val currentAriesModel by appPrefsRepository.ariesSelectedModelFlow.collectAsState(initial = "")
@@ -707,6 +710,8 @@ class MainActivity : AppCompatActivity() {
                 currentUseThirdParty,
                 currentUseLocalModel,
                 currentUseAriesApi,
+                currentUseAipingApi,
+                currentAipingApiKey,
                 currentApiBaseUrl,
                 currentApiModel,
                 currentAriesModel,
@@ -714,10 +719,11 @@ class MainActivity : AppCompatActivity() {
                 useThirdPartyApi = currentUseThirdParty
                 useLocalModel    = currentUseLocalModel
                 useAriesApi      = currentUseAriesApi
+                useAipingApi     = currentUseAipingApi
                 apiBaseUrl       = currentApiBaseUrl
                 apiModel         = currentApiModel
                 ariesSelectedModel = currentAriesModel
-                if (currentUseAriesApi) {
+                if (currentUseAriesApi || currentUseAipingApi) {
                     updateStatusText()
                 } else {
                     onApiConfigPotentiallyChanged(showNeedsCheckMessage = false)
@@ -2566,6 +2572,7 @@ class MainActivity : AppCompatActivity() {
         useThirdPartyApi = prefs.getBoolean(apiUseThirdPartyPref, false)
         useLocalModel = prefs.getBoolean(apiUseLocalModelPref, false)
         useAriesApi = appPrefsRepository.getUseAriesApiBlocking()
+        useAipingApi = appPrefsRepository.getUseAipingApiBlocking()
         ariesSelectedModel = appPrefsRepository.getAriesSelectedModelBlocking()
         apiBaseUrl =
             prefs.getString(apiThirdPartyBaseUrlPref, AutoGlmClient.DEFAULT_BASE_URL)
@@ -2582,7 +2589,7 @@ class MainActivity : AppCompatActivity() {
         }
         applyLocalModelUiState(useLocalModel)
 
-        if (useAriesApi) {
+        if (useAriesApi || useAipingApi) {
             remoteApiOk = null
             remoteApiChecking = false
             updateStatusText()
@@ -2707,7 +2714,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (useAriesApi) {
+        if (useAriesApi || useAipingApi) {
             remoteApiChecking = false
             remoteApiOk = null
             lastCheckedApiKey = ""
@@ -2792,7 +2799,7 @@ class MainActivity : AppCompatActivity() {
             return AutoGlmClient.DEFAULT_BASE_URL
         }
         if (useAriesApi) return AriesApiClient.ARIES_API_V1_BASE_URL
-        if (!useThirdPartyApi) return AutoGlmClient.DEFAULT_BASE_URL
+        if (!useThirdPartyApi && !useAipingApi) return AutoGlmClient.DEFAULT_BASE_URL
         val rawUrl = apiBaseUrl
         return normalizeBaseUrlInput(rawUrl) ?: AutoGlmClient.DEFAULT_BASE_URL
     }
@@ -2846,7 +2853,7 @@ class MainActivity : AppCompatActivity() {
                 AriesApiClient.ARIES_CHAT_MODEL
             }
         }
-        if (!useThirdPartyApi) return AutoGlmClient.DEFAULT_MODEL
+        if (!useThirdPartyApi && !useAipingApi) return AutoGlmClient.DEFAULT_MODEL
         return apiModel.trim().ifBlank { AutoGlmClient.DEFAULT_MODEL }
     }
 
@@ -2881,6 +2888,7 @@ class MainActivity : AppCompatActivity() {
         val mode =
             when {
                 useAriesApi -> "aries"
+                useAipingApi -> "aiping"
                 useThirdParty -> "third_party"
                 else -> "default"
             }
@@ -2892,18 +2900,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resolveActiveApiKey(): String {
-        return if (appPrefsRepository.getUseAriesApiBlocking()) {
-            appPrefsRepository.getActiveAriesApiKeyBlocking()
-        } else {
-            prefs.getString("api_key", "").orEmpty()
+        return when {
+            appPrefsRepository.getUseAriesApiBlocking() -> appPrefsRepository.getActiveAriesApiKeyBlocking()
+            appPrefsRepository.getUseAipingApiBlocking() -> appPrefsRepository.getAipingApiKeyBlocking()
+            else -> prefs.getString("api_key", "").orEmpty()
         }.trim()
     }
 
     private suspend fun resolveFreshActiveApiKey(): String {
-        if (!appPrefsRepository.getUseAriesApiBlocking()) {
-            return prefs.getString("api_key", "").orEmpty().trim()
+        return when {
+            appPrefsRepository.getUseAriesApiBlocking() -> appPrefsRepository.getActiveAriesApiKeyBlocking().trim()
+            appPrefsRepository.getUseAipingApiBlocking() -> appPrefsRepository.getAipingApiKeyBlocking().trim()
+            else -> prefs.getString("api_key", "").orEmpty().trim()
         }
-        return appPrefsRepository.getActiveAriesApiKeyBlocking().trim()
     }
 
     private fun updateStatusText() {
@@ -2922,6 +2931,11 @@ class MainActivity : AppCompatActivity() {
 
         if (useAriesApi) {
             statusTextState.value = getString(R.string.settings_model_api_aries_mode)
+            return
+        }
+
+        if (useAipingApi) {
+            statusTextState.value = getString(R.string.settings_model_api_aiping_login)
             return
         }
 
@@ -3295,7 +3309,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (!localModeEnabled && apiKey.isBlank() && !usingAriesApi) {
+        if (!localModeEnabled && apiKey.isBlank()) {
 
             Toast.makeText(this, getString(R.string.settings_api_key_missing_entry), Toast.LENGTH_SHORT).show()
             navigateToRoute(Routes.Settings.route)
@@ -4062,7 +4076,7 @@ class MainActivity : AppCompatActivity() {
         val localModeEnabled = isLocalModelModeEnabled()
         val usingAriesApi = appPrefsRepository.getUseAriesApiBlocking()
         val apiKey = if (localModeEnabled) "" else resolveActiveApiKey()
-        if (!localModeEnabled && apiKey.isBlank() && !usingAriesApi) {
+        if (!localModeEnabled && apiKey.isBlank()) {
             onDone(text)
             return
         }

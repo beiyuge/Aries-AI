@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.phoneagent.R
 import com.ai.phoneagent.data.preferences.AppPreferencesRepository
+import com.ai.phoneagent.net.AipingLogtoAuthManager
 import com.ai.phoneagent.net.AriesApiClient
 import com.ai.phoneagent.net.AriesOidcAuthManager
 import com.ai.phoneagent.net.AutoGlmClient
@@ -26,6 +27,7 @@ class SettingsViewModel(
     application: Application,
     private val prefs: AppPreferencesRepository,
     private val ariesOidcAuthManager: AriesOidcAuthManager,
+    private val aipingLogtoAuthManager: AipingLogtoAuthManager,
 ) : AndroidViewModel(application) {
 
     enum class SettingsPage {
@@ -39,6 +41,7 @@ class SettingsViewModel(
     enum class ApiMode {
         Official,
         ThirdParty,
+        Aiping,
         Local,
         Aries,
     }
@@ -72,6 +75,9 @@ class SettingsViewModel(
     var useAriesApi by mutableStateOf(false)
         private set
 
+    var useAipingApi by mutableStateOf(false)
+        private set
+
     var currentApiMode by mutableStateOf(ApiMode.Official)
         private set
 
@@ -99,6 +105,9 @@ class SettingsViewModel(
 
     // ─── Aries 登录状态 ──────────────────────────────────────────────────────
     var ariesLoggedInUser by mutableStateOf("")
+        private set
+
+    var aipingLoggedInUser by mutableStateOf("")
         private set
 
     // ─── Aries 已选模型 ──────────────────────────────────────────────────────
@@ -152,6 +161,11 @@ class SettingsViewModel(
                 ariesLoggedInUser = user
             }
         }
+        viewModelScope.launch {
+            prefs.aipingLoggedInUserFlow.collect { user ->
+                aipingLoggedInUser = user
+            }
+        }
         // 响应式监听 Aries 已选模型
         viewModelScope.launch {
             prefs.ariesSelectedModelFlow.collect { model ->
@@ -167,15 +181,18 @@ class SettingsViewModel(
         val restoredThirdParty = prefs.getApiUseThirdPartyBlocking()
         val restoredLocal = prefs.getApiUseLocalModelBlocking()
         val restoredAries = prefs.getUseAriesApiBlocking()
+        val restoredAiping = prefs.getUseAipingApiBlocking()
         showAriesApiSection = prefs.getAriesApiSectionUnlockedBlocking()
         val restoredMode =
             resolveApiMode(
                 useThirdParty = restoredThirdParty,
                 useLocal = restoredLocal && showAriesApiSection,
                 useAries = restoredAries && showAriesApiSection,
+                useAiping = restoredAiping,
             )
         applyApiModeState(restoredMode)
         ariesLoggedInUser = prefs.getAriesLoggedInUserBlocking()
+        aipingLoggedInUser = prefs.getAipingLoggedInUserBlocking()
         ariesSelectedModel = prefs.getAriesSelectedModelBlocking()
         apiBaseUrlText = prefs.getApiThirdPartyBaseUrlBlocking().ifBlank { AutoGlmClient.DEFAULT_BASE_URL }
         apiModelText = prefs.getApiThirdPartyModelBlocking().ifBlank { AutoGlmClient.DEFAULT_MODEL }
@@ -183,6 +200,7 @@ class SettingsViewModel(
             restoredThirdParty = restoredThirdParty,
             restoredLocal = restoredLocal,
             restoredAries = restoredAries,
+            restoredAiping = restoredAiping,
         )
 
         val lastSig = prefs.getApiLastCheckSigBlocking()
@@ -268,14 +286,14 @@ class SettingsViewModel(
 
     fun onApiBaseUrlChange(value: String) {
         apiBaseUrlText = value
-        if (useThirdPartyApi) {
+        if (useThirdPartyApi || useAipingApi) {
             onApiConfigChanged(clearApiValue = false)
         }
     }
 
     fun onApiModelChange(value: String) {
         apiModelText = value
-        if (useThirdPartyApi) {
+        if (useThirdPartyApi || useAipingApi) {
             onApiConfigChanged(clearApiValue = false)
         }
     }
@@ -337,6 +355,7 @@ class SettingsViewModel(
                 clearCheckResults = true,
             )
             prefs.setUseAriesApi(useAriesApi)
+            prefs.setUseAipingApi(useAipingApi)
         }
         updateStatusText()
     }
@@ -370,6 +389,22 @@ class SettingsViewModel(
                 key = key,
                 baseUrl = AriesApiClient.ARIES_API_V1_BASE_URL,
                 model = ariesSelectedModel.ifBlank { AutoGlmClient.DEFAULT_MODEL },
+                force = true,
+                onToast = onToast,
+            )
+            return
+        }
+
+        if (useAipingApi) {
+            val key = prefs.getAipingApiKeyBlocking().trim()
+            if (key.isBlank()) {
+                onToast(stringRes(R.string.settings_model_api_aiping_login_required))
+                return
+            }
+            startApiCheck(
+                key = key,
+                baseUrl = resolveAipingApiBaseUrl(),
+                model = resolveAipingApiModel(),
                 force = true,
                 onToast = onToast,
             )
@@ -518,6 +553,18 @@ class SettingsViewModel(
                         else -> stringRes(R.string.settings_model_api_aries_login_required)
                     }
             }
+        } else if (useAipingApi) {
+            val hasAipingKey = prefs.getAipingApiKeyBlocking().isNotBlank()
+            apiStatusPositive = remoteApiOk == true || (remoteApiOk == null && hasAipingKey)
+            if (!remoteApiChecking) {
+                apiStatusText =
+                    when {
+                        remoteApiOk == true -> stringRes(R.string.settings_api_available)
+                        remoteApiOk == false -> stringRes(R.string.settings_api_failed)
+                        hasAipingKey -> stringRes(R.string.settings_model_api_aiping_ready)
+                        else -> stringRes(R.string.settings_model_api_aiping_login_required)
+                    }
+            }
         } else if (useLocalModel) {
             apiStatusPositive = localModelReady
             apiStatusText =
@@ -550,12 +597,14 @@ class SettingsViewModel(
 
     fun resolveApiBaseUrl(): String {
         if (useAriesApi) return AriesApiClient.ARIES_API_V1_BASE_URL
+        if (useAipingApi) return resolveAipingApiBaseUrl()
         if (useLocalModel) return AutoGlmClient.DEFAULT_BASE_URL
         return resolveRemoteApiBaseUrl()
     }
 
     fun resolveApiModel(): String {
         if (useAriesApi) return AriesApiClient.ARIES_CHAT_MODEL
+        if (useAipingApi) return resolveAipingApiModel()
         if (useLocalModel) return ModelScopeModelDownloader.QWEN35_MODEL_NAME
         return resolveRemoteApiModel()
     }
@@ -569,6 +618,12 @@ class SettingsViewModel(
         if (!useThirdPartyApi) return AutoGlmClient.DEFAULT_MODEL
         return apiModelText.trim().ifBlank { AutoGlmClient.DEFAULT_MODEL }
     }
+
+    private fun resolveAipingApiBaseUrl(): String =
+        apiBaseUrlText.trim().ifBlank { AutoGlmClient.DEFAULT_BASE_URL }
+
+    private fun resolveAipingApiModel(): String =
+        apiModelText.trim().ifBlank { AutoGlmClient.DEFAULT_MODEL }
 
     fun maskKey(raw: String): String {
         if (raw.length <= 8) return raw
@@ -593,7 +648,14 @@ class SettingsViewModel(
     }
 
     fun apiConfigSignature(apiKey: String, baseUrl: String, model: String): String {
-        return "${if (useThirdPartyApi) "1" else "0"}|${apiKey.trim()}|${baseUrl.ifBlank { AutoGlmClient.DEFAULT_BASE_URL }}|${model.ifBlank { AutoGlmClient.DEFAULT_MODEL }}"
+        val mode =
+            when {
+                useAriesApi -> "aries"
+                useAipingApi -> "aiping"
+                useThirdPartyApi -> "third_party"
+                else -> "official"
+            }
+        return "$mode|${apiKey.trim()}|${baseUrl.ifBlank { AutoGlmClient.DEFAULT_BASE_URL }}|${model.ifBlank { AutoGlmClient.DEFAULT_MODEL }}"
     }
 
     fun validateBaseUrlSecurity(baseUrl: String): String? {
@@ -687,6 +749,58 @@ class SettingsViewModel(
         }
     }
 
+    fun applyAipingLoginResult(apiKey: String, displayName: String, onSuccess: (String) -> Unit) {
+        val cleanKey = apiKey.trim()
+        if (cleanKey.isBlank()) return
+        viewModelScope.launch {
+            prefs.setAipingApiKey(cleanKey)
+            val resolvedDisplayName = displayName.ifBlank { stringRes(R.string.settings_model_api_aiping_login) }
+            prefs.setAipingLoggedInUser(resolvedDisplayName)
+            applyApiModeState(ApiMode.Aiping)
+            persistApiModeState(clearCheckResults = true)
+            aipingLoggedInUser = resolvedDisplayName
+            remoteApiOk = null
+            remoteApiChecking = false
+            lastCheckedApiKey = ""
+            updateStatusText()
+            onSuccess(stringRes(R.string.settings_model_api_aiping_login_success, resolvedDisplayName))
+        }
+    }
+
+    fun submitAipingLogin(activity: Activity, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        ariesLoginLoading = true
+        viewModelScope.launch {
+            val result = aipingLogtoAuthManager.signInAndGetApiKey(activity)
+            ariesLoginLoading = false
+            if (result.success) {
+                applyAipingLoginResult(
+                    apiKey = result.apiKey,
+                    displayName = result.displayName,
+                    onSuccess = onSuccess,
+                )
+            } else {
+                onError(result.message.ifBlank { stringRes(R.string.settings_model_api_aiping_login_required) })
+            }
+        }
+    }
+
+    fun aipingLogout() {
+        viewModelScope.launch {
+            aipingLogtoAuthManager.signOut()
+            prefs.setAipingLoggedInUser("")
+            prefs.setAipingApiKey("")
+            aipingLoggedInUser = ""
+            if (currentApiMode == ApiMode.Aiping) {
+                applyApiModeState(ApiMode.Official)
+                persistApiModeState(clearCheckResults = true)
+                remoteApiOk = null
+                remoteApiChecking = false
+                lastCheckedApiKey = ""
+            }
+            updateStatusText()
+        }
+    }
+
     // ─── Aries 模型选择 ────────────────────────────────────────────────
 
     private fun fetchAndShowModels(apiKey: String) {
@@ -731,9 +845,11 @@ class SettingsViewModel(
         useThirdParty: Boolean = useThirdPartyApi,
         useLocal: Boolean = useLocalModel,
         useAries: Boolean = useAriesApi,
+        useAiping: Boolean = useAipingApi,
     ): ApiMode =
         when {
             useAries -> ApiMode.Aries
+            useAiping -> ApiMode.Aiping
             useLocal -> ApiMode.Local
             useThirdParty -> ApiMode.ThirdParty
             else -> ApiMode.Official
@@ -744,17 +860,20 @@ class SettingsViewModel(
         useThirdPartyApi = mode == ApiMode.ThirdParty
         useLocalModel = mode == ApiMode.Local
         useAriesApi = mode == ApiMode.Aries
+        useAipingApi = mode == ApiMode.Aiping
     }
 
     private fun normalizePersistedApiModeIfNeeded(
         restoredThirdParty: Boolean,
         restoredLocal: Boolean,
         restoredAries: Boolean,
+        restoredAiping: Boolean,
     ) {
         if (
             restoredThirdParty == useThirdPartyApi &&
             restoredLocal == useLocalModel &&
-            restoredAries == useAriesApi
+            restoredAries == useAriesApi &&
+            restoredAiping == useAipingApi
         ) {
             return
         }
@@ -775,6 +894,7 @@ class SettingsViewModel(
             clearCheckResults = clearCheckResults,
         )
         prefs.setUseAriesApi(useAriesApi)
+        prefs.setUseAipingApi(useAipingApi)
     }
 
     private fun stringRes(resId: Int, vararg args: Any): String =
