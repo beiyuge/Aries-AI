@@ -38,6 +38,7 @@ import com.ai.phoneagent.core.tools.ToolRegistration
 import com.ai.phoneagent.data.preferences.AppPreferencesRepository
 import com.ai.phoneagent.data.preferences.AutomationResultsRepository
 import com.ai.phoneagent.net.AriesApiClient
+import com.ai.phoneagent.net.AipingApiClient
 import com.ai.phoneagent.net.AutoGlmClient
 import com.ai.phoneagent.net.ModelScopeModelDownloader
 import com.ai.phoneagent.speech.SherpaSpeechRecognizer
@@ -1199,6 +1200,9 @@ class AutomationViewModel(
         if (appPrefsRepository.getUseAriesApiBlocking()) {
             return appPrefsRepository.getActiveAriesApiKeyBlocking()
         }
+        if (appPrefsRepository.getUseAipingApiBlocking()) {
+            return appPrefsRepository.getAipingApiKeyBlocking()
+        }
         val key = appPrefsRepository.getApiKeyBlocking()
         if (key.isNotBlank()) return key
         return appPrefsRepository.getAutoglmApiKeyBlocking()
@@ -1212,10 +1216,14 @@ class AutomationViewModel(
         if (appPrefsRepository.getUseAriesApiBlocking()) {
             return AriesApiClient.ARIES_API_V1_BASE_URL
         }
+        if (appPrefsRepository.getUseAipingApiBlocking()) {
+            return AipingApiClient.AIPING_API_V1_BASE_URL
+        }
+        val useAipingApi = appPrefsRepository.getUseAipingApiBlocking()
         val useThirdParty = appPrefsRepository.getApiUseThirdPartyBlocking()
         val useLocalModel = appPrefsRepository.getApiUseLocalModelBlocking()
         if (useLocalModel) return AutoGlmClient.DEFAULT_BASE_URL
-        if (!useThirdParty) return AutoGlmClient.DEFAULT_BASE_URL
+        if (!useThirdParty && !useAipingApi) return AutoGlmClient.DEFAULT_BASE_URL
         val rawUrl = appPrefsRepository.getApiThirdPartyBaseUrlBlocking().trim()
         return rawUrl.ifBlank { AutoGlmClient.DEFAULT_BASE_URL }
     }
@@ -1226,8 +1234,14 @@ class AutomationViewModel(
         }
         val useLocalModel = appPrefsRepository.getApiUseLocalModelBlocking()
         val useThirdParty = appPrefsRepository.getApiUseThirdPartyBlocking()
+        val useAipingApi = appPrefsRepository.getUseAipingApiBlocking()
         if (useLocalModel) return ModelScopeModelDownloader.QWEN35_MODEL_NAME
-        if (!useThirdParty) return AutoGlmClient.PHONE_MODEL
+        if (useAipingApi) {
+            return appPrefsRepository.getAipingAutomationModelBlocking()
+                .trim()
+                .ifBlank { AipingApiClient.AIPING_DEFAULT_AUTOMATION_MODEL }
+        }
+        if (!useThirdParty && !useAipingApi) return AutoGlmClient.PHONE_MODEL
 
         val rawModel = appPrefsRepository.getApiThirdPartyModelBlocking().trim()
         return rawModel.ifBlank { AutoGlmClient.DEFAULT_MODEL }

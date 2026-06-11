@@ -2,6 +2,8 @@ package com.ai.phoneagent.ui.settings
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.ArrowLeft
 import com.composables.icons.lucide.ExternalLink
@@ -59,12 +63,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.ai.phoneagent.R
 import com.ai.phoneagent.core.designsystem.theme.AriesMaterialTheme
@@ -95,7 +105,8 @@ private data class ApiModeOptionUi(
     val mode: SettingsViewModel.ApiMode,
     val title: String,
     val description: String,
-    val icon: ImageVector,
+    val icon: ImageVector? = null,
+    @param:DrawableRes val iconRes: Int? = null,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -423,7 +434,14 @@ fun DrawerModelApiConfigScreen(
     showAriesApiSection: Boolean,
     ariesLoggedInUser: String,
     ariesSelectedModel: String,
+    aipingLoggedInUser: String,
+    aipingAccountInfo: String,
+    aipingChatModel: String,
+    aipingAutomationModel: String,
+    aipingModelsLoading: Boolean,
     onChangeAriesModel: () -> Unit,
+    onAipingChatModelClick: () -> Unit,
+    onAipingAutomationModelClick: () -> Unit,
     onBack: () -> Unit,
     onApiModeChange: (SettingsViewModel.ApiMode) -> Unit,
     onApiInputChange: (String) -> Unit,
@@ -431,6 +449,8 @@ fun DrawerModelApiConfigScreen(
     onOpenMembership: () -> Unit,
     onAriesLoginClick: () -> Unit,
     onAriesLogout: () -> Unit,
+    onAipingLoginClick: () -> Unit,
+    onAipingLogout: () -> Unit,
     onApiBaseUrlChange: (String) -> Unit,
     onApiModelChange: (String) -> Unit,
     onCheckApi: () -> Unit,
@@ -449,6 +469,7 @@ fun DrawerModelApiConfigScreen(
         when (currentApiMode) {
             SettingsViewModel.ApiMode.Official -> stringResource(R.string.settings_model_api_mode_official)
             SettingsViewModel.ApiMode.ThirdParty -> stringResource(R.string.settings_model_api_mode_third_party)
+            SettingsViewModel.ApiMode.Aiping -> stringResource(R.string.settings_model_api_aiping_login)
             SettingsViewModel.ApiMode.Local -> stringResource(R.string.settings_model_api_mode_local)
             SettingsViewModel.ApiMode.Aries -> stringResource(R.string.settings_model_api_aries_mode)
         }
@@ -456,6 +477,7 @@ fun DrawerModelApiConfigScreen(
         when (currentApiMode) {
             SettingsViewModel.ApiMode.Official -> stringResource(R.string.settings_model_api_mode_official_description)
             SettingsViewModel.ApiMode.ThirdParty -> stringResource(R.string.settings_model_api_mode_third_party_description)
+            SettingsViewModel.ApiMode.Aiping -> stringResource(R.string.settings_model_api_aiping_login_description)
             SettingsViewModel.ApiMode.Local -> stringResource(R.string.settings_model_api_mode_local_description)
             SettingsViewModel.ApiMode.Aries -> stringResource(R.string.settings_model_api_aries_mode_description)
         }
@@ -475,6 +497,14 @@ fun DrawerModelApiConfigScreen(
                     title = stringResource(R.string.settings_model_api_mode_third_party),
                     description = stringResource(R.string.settings_model_api_mode_third_party_description),
                     icon = Lucide.Cloud,
+                ),
+            )
+            add(
+                ApiModeOptionUi(
+                    mode = SettingsViewModel.ApiMode.Aiping,
+                    title = stringResource(R.string.settings_model_api_aiping_login),
+                    description = stringResource(R.string.settings_model_api_aiping_login_description),
+                    iconRes = R.drawable.ic_aiping_logo,
                 ),
             )
             if (showAriesApiSection) {
@@ -557,15 +587,21 @@ fun DrawerModelApiConfigScreen(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.secondaryContainer,
                         ) {
-                            Icon(
-                                imageVector =
+                            AipingModeIcon(
+                                icon =
                                     when (currentApiMode) {
                                         SettingsViewModel.ApiMode.Official -> Lucide.KeyRound
                                         SettingsViewModel.ApiMode.ThirdParty -> Lucide.Cloud
+                                        SettingsViewModel.ApiMode.Aiping -> null
                                         SettingsViewModel.ApiMode.Local -> Lucide.Cpu
                                         SettingsViewModel.ApiMode.Aries -> Lucide.Sparkles
                                     },
-                                contentDescription = null,
+                                iconRes =
+                                    if (currentApiMode == SettingsViewModel.ApiMode.Aiping) {
+                                        R.drawable.ic_aiping_logo
+                                    } else {
+                                        null
+                                    },
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.padding(spacingSm),
                             )
@@ -614,8 +650,11 @@ fun DrawerModelApiConfigScreen(
                                 title = option.title,
                                 description = option.description,
                                 icon = option.icon,
+                                iconRes = option.iconRes,
                                 selected = currentApiMode == option.mode,
-                                onClick = { onApiModeChange(option.mode) },
+                                onClick = {
+                                    onApiModeChange(option.mode)
+                                },
                             )
                             if (index != modeOptions.lastIndex) {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -648,6 +687,7 @@ fun DrawerModelApiConfigScreen(
                             leadingIcon = {
                                 Icon(Lucide.KeyRound, contentDescription = null)
                             },
+                            keyboardType = KeyboardType.Password,
                         )
 
                         Spacer(modifier = Modifier.height(spacingSm))
@@ -696,6 +736,109 @@ fun DrawerModelApiConfigScreen(
                                 placeholder = stringResource(R.string.drawer_api_model_hint),
                                 leadingIcon = { Icon(Lucide.CircleCheck, contentDescription = null) },
                             )
+                        }
+                    }
+                }
+            }
+
+            if (currentApiMode == SettingsViewModel.ApiMode.Aiping) {
+                item {
+                    ModelApiSectionCard {
+                        SectionIntro(
+                            title = stringResource(R.string.settings_model_api_aiping_login),
+                            subtitle = stringResource(R.string.settings_model_api_aiping_login_description),
+                        )
+
+                        Spacer(modifier = Modifier.height(spacingMd))
+
+                        StatusPanel(
+                            title = stringResource(R.string.settings_model_api_status_title),
+                            body =
+                                if (aipingLoggedInUser.isNotBlank()) {
+                                    buildString {
+                                        append(stringResource(R.string.settings_model_api_aiping_logged_in, aipingLoggedInUser))
+                                        if (aipingAccountInfo.isNotBlank()) {
+                                            append('\n')
+                                            append(aipingAccountInfo)
+                                        }
+                                    }
+                                } else {
+                                    stringResource(R.string.settings_model_api_aiping_login_required)
+                                },
+                            containerColor = statusContainerColor,
+                            contentColor = statusContentColor,
+                        )
+
+                        Spacer(modifier = Modifier.height(spacingMd))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(spacingSm)) {
+                            if (aipingLoggedInUser.isNotBlank()) {
+                                OutlinedButton(
+                                    onClick = {},
+                                    enabled = false,
+                                    modifier = Modifier.fillMaxWidth().height(compactButtonHeight),
+                                ) {
+                                    Icon(Lucide.CircleCheck, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(spacingSm))
+                                    Text(stringResource(R.string.settings_model_api_aiping_logged_in, aipingLoggedInUser))
+                                }
+                                OutlinedButton(
+                                    onClick = onAipingLogout,
+                                    modifier = Modifier.fillMaxWidth().height(compactButtonHeight),
+                                ) {
+                                    Text(stringResource(R.string.settings_model_api_aiping_logout))
+                                }
+                            } else {
+                                Button(
+                                    onClick = onAipingLoginClick,
+                                    modifier = Modifier.fillMaxWidth().height(compactButtonHeight),
+                                ) {
+                                    AipingModeIcon(
+                                        icon = null,
+                                        iconRes = R.drawable.ic_aiping_logo,
+                                        tint = Color.Unspecified,
+                                    )
+                                    Spacer(modifier = Modifier.width(spacingSm))
+                                    Text(stringResource(R.string.settings_model_api_aiping_login_button))
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(spacingMd))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(modifier = Modifier.height(spacingMd))
+
+                        SectionIntro(
+                            title = stringResource(R.string.settings_model_api_aiping_models_title),
+                            subtitle = stringResource(R.string.settings_model_api_aiping_models_subtitle),
+                        )
+
+                        Spacer(modifier = Modifier.height(spacingMd))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(spacingSm)) {
+                            AipingModelSelectorButton(
+                                title = stringResource(R.string.settings_model_api_aiping_chat_model),
+                                model = aipingChatModel,
+                                enabled = aipingLoggedInUser.isNotBlank() && !aipingModelsLoading,
+                                onClick = onAipingChatModelClick,
+                            )
+
+                            AipingModelSelectorButton(
+                                title = stringResource(R.string.settings_model_api_aiping_automation_model),
+                                model = aipingAutomationModel,
+                                enabled = aipingLoggedInUser.isNotBlank() && !aipingModelsLoading,
+                                onClick = onAipingAutomationModelClick,
+                            )
+
+                            FilledTonalButton(
+                                onClick = onCheckApi,
+                                enabled = aipingLoggedInUser.isNotBlank(),
+                                modifier = Modifier.fillMaxWidth().height(compactButtonHeight),
+                            ) {
+                                Icon(Lucide.RotateCw, contentDescription = null)
+                                Spacer(modifier = Modifier.width(spacingSm))
+                                Text(stringResource(R.string.m3t_sidebar_check_connection))
+                            }
                         }
                     }
                 }
@@ -908,10 +1051,42 @@ private fun StatusPanel(
 }
 
 @Composable
+private fun AipingModelSelectorButton(
+    title: String,
+    model: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val spacingSm = dimensionResource(R.dimen.m3t_spacing_sm)
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(dimensionResource(R.dimen.m3t_compact_button_height)),
+    ) {
+        Icon(Lucide.CircleCheck, contentDescription = null)
+        Spacer(modifier = Modifier.width(spacingSm))
+        Text(
+            text = title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.width(spacingSm))
+        Text(
+            text = model.ifBlank { stringResource(R.string.settings_model_api_aiping_model_placeholder) },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
 private fun ModeOptionRow(
     title: String,
     description: String,
-    icon: ImageVector,
+    icon: ImageVector?,
+    @DrawableRes iconRes: Int? = null,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -926,14 +1101,16 @@ private fun ModeOptionRow(
             horizontalArrangement = Arrangement.spacedBy(spacingSm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
+            AipingModeIcon(
+                icon = icon,
+                iconRes = iconRes,
                 tint =
-                    if (selected) {
+                    if (selected && iconRes == null) {
                         MaterialTheme.colorScheme.primary
-                    } else {
+                    } else if (iconRes == null) {
                         MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        Color.Unspecified
                     },
                 modifier = Modifier.size(dimensionResource(R.dimen.m3t_about_row_icon_size)),
             )
@@ -959,13 +1136,39 @@ private fun ModeOptionRow(
 }
 
 @Composable
+private fun AipingModeIcon(
+    icon: ImageVector?,
+    @DrawableRes iconRes: Int?,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    if (iconRes != null) {
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    } else if (icon != null) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
 private fun FilledInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
     leadingIcon: @Composable (() -> Unit)? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     TextField(
         value = value,
         onValueChange = onValueChange,
@@ -975,6 +1178,18 @@ private fun FilledInputField(
         leadingIcon = leadingIcon,
         singleLine = true,
         shape = MaterialTheme.shapes.large,
+        keyboardOptions =
+            KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = ImeAction.Done,
+            ),
+        keyboardActions =
+            KeyboardActions(
+                onDone = {
+                    keyboardController?.hide()
+                    focusManager.clearFocus(force = true)
+                },
+            ),
         colors =
             TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,

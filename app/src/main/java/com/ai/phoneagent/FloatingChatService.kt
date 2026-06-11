@@ -113,6 +113,7 @@ import com.ai.phoneagent.core.designsystem.theme.AriesMaterialTheme
 import com.ai.phoneagent.core.designsystem.theme.ThemeColorStyle
 import com.ai.phoneagent.core.designsystem.theme.ThemeMode
 import com.ai.phoneagent.net.AriesApiClient
+import com.ai.phoneagent.net.AipingApiClient
 import com.ai.phoneagent.net.AutoGlmClient
 import com.ai.phoneagent.net.ChatRequestMessage
 import com.ai.phoneagent.net.LocalMnnInferenceEngine
@@ -339,11 +340,12 @@ class FloatingChatService : LifecycleService(), SavedStateRegistryOwner {
 
     private fun resolveApiConfig(): Triple<String, String, String> {
             val useAriesApi = appPrefsRepository.getUseAriesApiBlocking()
+            val useAipingApi = appPrefsRepository.getUseAipingApiBlocking()
             val apiKey =
-                    if (useAriesApi) {
-                        appPrefsRepository.getActiveAriesApiKeyBlocking().trim()
-                    } else {
-                        appPrefsRepository.getApiKeyBlocking().trim()
+                    when {
+                        useAriesApi -> appPrefsRepository.getActiveAriesApiKeyBlocking().trim()
+                        useAipingApi -> appPrefsRepository.getAipingApiKeyBlocking().trim()
+                        else -> appPrefsRepository.getApiKeyBlocking().trim()
                     }
             val useThirdParty = appPrefsRepository.getApiUseThirdPartyBlocking()
             val useLocalModel = appPrefsRepository.getApiUseLocalModelBlocking()
@@ -356,7 +358,9 @@ class FloatingChatService : LifecycleService(), SavedStateRegistryOwner {
                         AutoGlmClient.DEFAULT_BASE_URL
                     } else if (useAriesApi) {
                         AriesApiClient.ARIES_API_V1_BASE_URL
-                    } else if (!useThirdParty) {
+                    } else if (useAipingApi) {
+                        AipingApiClient.AIPING_API_V1_BASE_URL
+                    } else if (!useThirdParty && !useAipingApi) {
                         AutoGlmClient.DEFAULT_BASE_URL
                     } else {
                         storedThirdPartyBaseUrl
@@ -366,7 +370,11 @@ class FloatingChatService : LifecycleService(), SavedStateRegistryOwner {
                         ModelScopeModelDownloader.QWEN35_MODEL_NAME
                     } else if (useAriesApi) {
                         AriesApiClient.ARIES_CHAT_MODEL
-                    } else if (!useThirdParty) {
+                    } else if (useAipingApi) {
+                        appPrefsRepository.getAipingChatModelBlocking()
+                            .trim()
+                            .ifBlank { AipingApiClient.AIPING_DEFAULT_CHAT_MODEL }
+                    } else if (!useThirdParty && !useAipingApi) {
                         AutoGlmClient.DEFAULT_MODEL
                     } else {
                         appPrefsRepository.getApiThirdPartyModelBlocking()

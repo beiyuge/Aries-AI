@@ -98,6 +98,27 @@
             android:exported="false"
             android:theme="@style/Theme.PhoneAgent" />
 
+        <activity
+            android:name=".net.AipingDirectLogtoActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.PhoneAgent">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="com.ai.phoneagent"
+                    android:path="/callback"
+                    android:scheme="io.logto.android" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".net.AipingFrontendApiKeyActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PhoneAgent" />
+
         <!-- FileProvider for camera photos -->
         <provider
             android:name="androidx.core.content.FileProvider"
