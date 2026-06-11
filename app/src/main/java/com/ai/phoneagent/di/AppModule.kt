@@ -40,7 +40,7 @@ val appModule = module {
     // AppState is a Kotlin object (singleton); bind it so Koin-injected code can resolve it.
     single { AppState }
     single { AriesOidcAuthManager(androidApplication()) }
-    single { AipingLogtoAuthManager(androidApplication()) }
+    single { AipingLogtoAuthManager(androidApplication(), get()) }
     single { TelemetryHeartbeatManager(androidApplication(), get(), get(), get()) }
 
     // TODO(T3): Uncomment once ConversationManager is extracted from object/singleton:

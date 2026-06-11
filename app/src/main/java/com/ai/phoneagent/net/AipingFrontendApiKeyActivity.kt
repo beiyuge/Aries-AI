@@ -2,29 +2,21 @@ package com.ai.phoneagent.net
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.webkit.CookieManager
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.ai.phoneagent.R
-import io.logto.sdk.android.constant.StorageKey
-import io.logto.sdk.android.storage.PersistStorage
-import io.logto.sdk.core.Core
-import io.logto.sdk.core.exception.CallbackUriVerificationException
-import io.logto.sdk.core.type.CodeTokenResponse
-import io.logto.sdk.core.type.OidcConfigResponse
-import io.logto.sdk.core.util.CallbackUriUtils
-import io.logto.sdk.core.util.TokenUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,48 +31,29 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.jose4j.jwk.JsonWebKeySet
-import org.jose4j.jwt.consumer.InvalidJwtException
-import org.jose4j.lang.JoseException
 import kotlin.coroutines.resume
 
-class AipingDirectLogtoActivity : Activity() {
-    data class DirectLoginResult(
+class AipingFrontendApiKeyActivity : Activity() {
+    data class FrontendApiKeyResult(
         val success: Boolean,
-        val accessToken: String = "",
         val apiKey: String = "",
         val webAccessToken: String = "",
-        val displayName: String = "",
-        val accountInfo: String = "",
-        val message: String = "",
-    )
-
-    data class ExchangeResult(
-        val success: Boolean,
-        val apiKey: String = "",
-        val displayName: String = "",
-        val accountInfo: String = "",
         val message: String = "",
     )
 
     data class PendingSession(
-        val oidcConfig: OidcConfigResponse,
-        val clientId: String,
-        val redirectUri: String,
-        val codeVerifier: String,
-        val state: String,
-        val storageName: String,
-        val exchange: (String, (ExchangeResult) -> Unit) -> Unit,
-        val completion: (DirectLoginResult) -> Unit,
+        val providerAccessToken: String,
+        val cachedWebAccessToken: String = "",
+        val completion: (FrontendApiKeyResult) -> Unit,
     )
 
     companion object {
-        const val EXTRA_AUTH_URL = "extra_auth_url"
         var pendingSession: PendingSession? = null
-
         private const val AIPING_FRONTEND_URL = "https://aiping.cn/user/apikey"
+        private const val AIPING_LOGIN_URL = "https://central.qc-ai.cn/login"
+        private const val TOKEN_QUERY = "accessToken"
+        private const val CACHED_TOKEN_PROBE_ATTEMPTS = 4
         private const val MAX_PROBE_ATTEMPTS = 240
-        private const val FRONTEND_LOGIN_EXPIRED_MESSAGE = "AI Ping 登录已过期，请重新登录"
 
         private const val START_PROBE_SCRIPT =
             """
@@ -106,23 +79,6 @@ class AipingDirectLogtoActivity : Activity() {
                 function parse(value) {
                   if (!value || typeof value !== 'string') return null;
                   try { return JSON.parse(value); } catch (e) { return null; }
-                }
-                function tokenFromUrl() {
-                  try {
-                    var names = ['accessToken', 'access_token', 'token'];
-                    var search = new URLSearchParams(window.location.search || '');
-                    for (var i = 0; i < names.length; i++) {
-                      var direct = search.get(names[i]);
-                      if (direct) return direct;
-                    }
-                    var hash = String(window.location.hash || '').replace(/^#/, '');
-                    var hashParams = new URLSearchParams(hash);
-                    for (var j = 0; j < names.length; j++) {
-                      var hashToken = hashParams.get(names[j]);
-                      if (hashToken) return hashToken;
-                    }
-                  } catch (e) {}
-                  return '';
                 }
                 function pickToken(value) {
                   if (!value) return '';
@@ -183,7 +139,7 @@ class AipingDirectLogtoActivity : Activity() {
                   return pickApiKey(value.data) || pickApiKey(value.apikeyBaseInfo);
                 }
                 try {
-                  var token = pickToken(tokenFromUrl()) || pickToken({
+                  var token = pickToken({
                     local: entries(window.localStorage),
                     session: entries(window.sessionStorage)
                   });
@@ -235,10 +191,8 @@ class AipingDirectLogtoActivity : Activity() {
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private var completed = false
-    private var finalizing = false
-    private var frontendMode = false
-    private var exchangeResult = ExchangeResult(success = false)
     private var pollJob: Job? = null
+    private var interactiveLoginLoaded = false
     private lateinit var webView: WebView
     private lateinit var progressContent: View
 
@@ -246,34 +200,24 @@ class AipingDirectLogtoActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val session = pendingSession
-        if (session == null) {
-            finishWith(DirectLoginResult(success = false, message = "AI Ping 登录会话已失效"))
+        if (session == null || session.providerAccessToken.isBlank()) {
+            finishWith(FrontendApiKeyResult(success = false, message = "AI Ping 前端取 Key 会话已失效"))
             return
         }
 
         webView =
             WebView(this).apply {
+                visibility = View.INVISIBLE
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 webViewClient =
                     object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView,
-                            request: WebResourceRequest,
-                        ): Boolean = handleNavigation(request.url.toString(), session)
-
-                        @Suppress("OVERRIDE_DEPRECATION")
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView,
-                            url: String,
-                        ): Boolean = handleNavigation(url, session)
-
                         override fun onPageFinished(view: WebView, url: String) {
-                            if (handleNavigation(url, session)) return
-                            if (frontendMode) {
-                                showProgress()
-                                startFrontendPolling()
+                            if (interactiveLoginLoaded) {
+                                webView.visibility = View.VISIBLE
+                                progressContent.visibility = View.GONE
                             }
+                            startPolling(session)
                         }
                     }
             }
@@ -283,150 +227,39 @@ class AipingDirectLogtoActivity : Activity() {
             flush()
         }
         progressContent = createProgressContent()
-        progressContent.visibility = View.GONE
         setContentView(
             FrameLayout(this).apply {
-                setBackgroundColor(ContextCompat.getColor(this@AipingDirectLogtoActivity, R.color.m3t_background))
+                setBackgroundColor(ContextCompat.getColor(this@AipingFrontendApiKeyActivity, R.color.m3t_background))
                 addView(webView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
                 addView(progressContent, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
             },
         )
-
-        val authUrl = intent.getStringExtra(EXTRA_AUTH_URL).orEmpty()
-        if (authUrl.isBlank()) {
-            finishWith(DirectLoginResult(success = false, message = "AI Ping 登录地址为空"))
-            return
+        if (session.cachedWebAccessToken.isNotBlank()) {
+            webView.loadUrl(buildInjectedFrontendUrl(session.cachedWebAccessToken))
+        } else {
+            showInteractiveLogin()
         }
-        webView.loadUrl(authUrl)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
-        finishWith(DirectLoginResult(success = false, message = "AI Ping 登录已取消"))
+        finishWith(FrontendApiKeyResult(success = false, message = "AI Ping 前端取 Key 已取消"))
     }
 
     override fun onDestroy() {
         pollJob?.cancel()
         if (!completed) {
-            finishWith(DirectLoginResult(success = false, message = "AI Ping 登录已取消"))
+            finishWith(FrontendApiKeyResult(success = false, message = "AI Ping 前端取 Key 已取消"))
         }
         super.onDestroy()
     }
 
-    private fun handleNavigation(url: String, session: PendingSession): Boolean {
-        if (!url.startsWith(session.redirectUri)) return false
-        handleUrl(url, session)
-        return true
-    }
-
-    private fun handleUrl(url: String, session: PendingSession) {
-        if (finalizing || completed) return
-        finalizing = true
-        showProgress()
-
-        val code =
-            try {
-                CallbackUriUtils.verifyAndParseCodeFromCallbackUri(
-                    callbackUri = url,
-                    redirectUri = session.redirectUri,
-                    state = session.state,
-                )
-            } catch (e: CallbackUriVerificationException) {
-                finishWith(
-                    DirectLoginResult(
-                        success = false,
-                        message =
-                            e.errorDesc
-                                ?.let { "AI Ping 授权被拒绝：$it" }
-                                ?: e.error?.let { "AI Ping 授权被拒绝：$it" }
-                                ?: "AI Ping 登录回调校验失败",
-                    ),
-                )
-                return
-            }
-
-        Core.fetchTokenByAuthorizationCode(
-            tokenEndpoint = session.oidcConfig.tokenEndpoint,
-            clientId = session.clientId,
-            redirectUri = session.redirectUri,
-            codeVerifier = session.codeVerifier,
-            code = code,
-            resource = null,
-        ) { error, codeToken ->
-            if (error != null || codeToken == null) {
-                finishWith(
-                    DirectLoginResult(
-                        success = false,
-                        message = error?.message.orEmpty().ifBlank { "Logto 授权码换取令牌失败" },
-                    ),
-                )
-                return@fetchTokenByAuthorizationCode
-            }
-            verifyAndContinue(session, codeToken)
-        }
-    }
-
-    private fun verifyAndContinue(session: PendingSession, codeToken: CodeTokenResponse) {
-        Core.fetchJwksJson(session.oidcConfig.jwksUri) { error, jwksJson ->
-            if (error != null || jwksJson == null) {
-                finishWith(
-                    DirectLoginResult(
-                        success = false,
-                        message = error?.message.orEmpty().ifBlank { "Logto JWKS 获取失败" },
-                    ),
-                )
-                return@fetchJwksJson
-            }
-
-            try {
-                TokenUtils.verifyIdToken(
-                    idToken = codeToken.idToken,
-                    clientId = session.clientId,
-                    issuer = session.oidcConfig.issuer,
-                    jwks = JsonWebKeySet(jwksJson),
-                )
-            } catch (e: InvalidJwtException) {
-                finishWith(DirectLoginResult(success = false, message = "Logto ID Token 校验失败"))
-                return@fetchJwksJson
-            } catch (e: JoseException) {
-                finishWith(DirectLoginResult(success = false, message = "Logto JWKS 解析失败"))
-                return@fetchJwksJson
-            }
-
-            PersistStorage(applicationContext, session.storageName).apply {
-                setItem(StorageKey.ID_TOKEN, codeToken.idToken)
-                setItem(StorageKey.REFRESH_TOKEN, codeToken.refreshToken)
-            }
-            session.exchange(codeToken.accessToken) { result ->
-                runOnUiThread {
-                    if (completed) return@runOnUiThread
-                    exchangeResult = result
-                    if (result.success && result.apiKey.isNotBlank()) {
-                        finishWith(
-                            DirectLoginResult(
-                                success = true,
-                                accessToken = codeToken.accessToken,
-                                apiKey = result.apiKey,
-                                displayName = result.displayName,
-                                accountInfo = result.accountInfo,
-                            ),
-                        )
-                    } else {
-                        frontendMode = true
-                        webView.visibility = View.INVISIBLE
-                        showProgress()
-                        webView.loadUrl(AIPING_FRONTEND_URL)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun startFrontendPolling() {
+    private fun startPolling(session: PendingSession) {
         if (completed || pollJob?.isActive == true) return
         pollJob =
             CoroutineScope(Dispatchers.Main).launch {
-                repeat(MAX_PROBE_ATTEMPTS) {
+                var lastFailure = "AI Ping 前端尚未返回 API Key"
+                repeat(MAX_PROBE_ATTEMPTS) { attempt ->
                     delay(900)
                     evaluateJavascript(START_PROBE_SCRIPT)
                     delay(700)
@@ -435,26 +268,25 @@ class AipingDirectLogtoActivity : Activity() {
                     if (decoded.isBlank()) return@repeat
                     val parsed = parseProbeResult(decoded)
                     if (parsed.success) {
-                        finishWith(
-                            DirectLoginResult(
-                                success = true,
-                                apiKey = parsed.apiKey,
-                                webAccessToken = parsed.webAccessToken,
-                                displayName = exchangeResult.displayName,
-                                accountInfo = exchangeResult.accountInfo,
-                            ),
-                        )
+                        finishWith(parsed)
                         return@launch
                     }
-                    if (parsed.message == FRONTEND_LOGIN_EXPIRED_MESSAGE) {
-                        finishWith(DirectLoginResult(success = false, message = FRONTEND_LOGIN_EXPIRED_MESSAGE))
-                        return@launch
-                    }
+                    lastFailure = parsed.message.ifBlank { lastFailure }
                     evaluateJavascript("window.__ariesAipingKeyProbeResult = ''; window.__ariesAipingKeyProbeRunning = false; ''")
+                    if (!interactiveLoginLoaded && attempt >= CACHED_TOKEN_PROBE_ATTEMPTS) {
+                        showInteractiveLogin()
+                    }
                 }
-                finishWith(DirectLoginResult(success = false, message = FRONTEND_LOGIN_EXPIRED_MESSAGE))
+                finishWith(FrontendApiKeyResult(success = false, message = lastFailure))
             }
     }
+
+    private fun buildInjectedFrontendUrl(providerAccessToken: String): String =
+        Uri.parse(AIPING_FRONTEND_URL)
+            .buildUpon()
+            .appendQueryParameter(TOKEN_QUERY, providerAccessToken)
+            .build()
+            .toString()
 
     private fun createProgressContent(): View {
         val spacingLg = resources.getDimensionPixelSize(R.dimen.m3t_spacing_lg)
@@ -465,13 +297,13 @@ class AipingDirectLogtoActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(spacingLg, spacingLg, spacingLg, spacingLg)
             addView(
-                ProgressBar(this@AipingDirectLogtoActivity),
+                ProgressBar(this@AipingFrontendApiKeyActivity),
                 LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
                     bottomMargin = spacingMd
                 },
             )
             addView(
-                TextView(this@AipingDirectLogtoActivity).apply {
+                TextView(this@AipingFrontendApiKeyActivity).apply {
                     text = getString(R.string.settings_model_api_aiping_finishing_login_title)
                     setTextAppearance(R.style.TextAppearance_M3t_Title_Large)
                     gravity = Gravity.CENTER
@@ -481,7 +313,7 @@ class AipingDirectLogtoActivity : Activity() {
                 },
             )
             addView(
-                TextView(this@AipingDirectLogtoActivity).apply {
+                TextView(this@AipingFrontendApiKeyActivity).apply {
                     text = getString(R.string.settings_model_api_aiping_finishing_login_body)
                     setTextAppearance(R.style.TextAppearance_M3t_Body_Small)
                     gravity = Gravity.CENTER
@@ -491,8 +323,18 @@ class AipingDirectLogtoActivity : Activity() {
         }
     }
 
-    private fun showProgress() {
-        progressContent.visibility = View.VISIBLE
+    private fun buildLoginFallbackUrl(): String =
+        Uri.parse(AIPING_LOGIN_URL)
+            .buildUpon()
+            .appendQueryParameter("fromUrl", AIPING_FRONTEND_URL)
+            .build()
+            .toString()
+
+    private fun showInteractiveLogin() {
+        interactiveLoginLoaded = true
+        webView.visibility = View.VISIBLE
+        progressContent.visibility = View.GONE
+        webView.loadUrl(buildLoginFallbackUrl())
     }
 
     private suspend fun evaluateJavascript(script: String): String =
@@ -506,21 +348,37 @@ class AipingDirectLogtoActivity : Activity() {
         runCatching { json.parseToJsonElement(raw).jsonPrimitive.contentOrNull.orEmpty() }
             .getOrDefault(raw)
 
-    private fun parseProbeResult(raw: String): DirectLoginResult =
+    private fun parseProbeResult(raw: String): FrontendApiKeyResult =
         runCatching {
             val obj = json.parseToJsonElement(raw).jsonObject
             val apiKey = textAt(obj, "apiKey")
             val webAccessToken = textAt(obj, "webAccessToken")
             if (obj["success"]?.jsonPrimitive?.booleanOrNull == true && apiKey.isNotBlank()) {
-                DirectLoginResult(success = true, apiKey = apiKey, webAccessToken = webAccessToken)
+                FrontendApiKeyResult(success = true, apiKey = apiKey, webAccessToken = webAccessToken)
             } else {
-                DirectLoginResult(
+                FrontendApiKeyResult(
                     success = false,
-                    message = if (textAt(obj, "stage") == "token") "" else FRONTEND_LOGIN_EXPIRED_MESSAGE,
+                    message =
+                        buildString {
+                            append("stage=")
+                            append(textAt(obj, "stage"))
+                            append(" status=")
+                            append(textAt(obj, "status"))
+                            append(" href=")
+                            append(textAt(obj, "href"))
+                            val tokenLength = textAt(obj, "tokenLength")
+                            if (tokenLength.isNotBlank()) append(" tokenLength=$tokenLength")
+                            val message = textAt(obj, "message")
+                            if (message.isNotBlank()) append(" message=$message")
+                            val bodyLength = textAt(obj, "bodyLength")
+                            if (bodyLength.isNotBlank()) append(" bodyLength=$bodyLength")
+                            val keys = textAt(obj, "keys")
+                            if (keys.isNotBlank()) append(" keys=$keys")
+                        }.trim(),
                 )
             }
         }.getOrElse { error ->
-            DirectLoginResult(success = false, message = FRONTEND_LOGIN_EXPIRED_MESSAGE)
+            FrontendApiKeyResult(success = false, message = "AI Ping 前端取 Key 结果解析失败：${error.message.orEmpty()}")
         }
 
     private fun textAt(obj: JsonObject, key: String): String =
@@ -529,7 +387,7 @@ class AipingDirectLogtoActivity : Activity() {
     private fun JsonElement.primitiveContent(): String =
         (this as? JsonPrimitive)?.contentOrNull.orEmpty()
 
-    private fun finishWith(result: DirectLoginResult) {
+    private fun finishWith(result: FrontendApiKeyResult) {
         if (completed) return
         completed = true
         pollJob?.cancel()

@@ -113,6 +113,7 @@ import com.ai.phoneagent.core.designsystem.theme.AriesMaterialTheme
 import com.ai.phoneagent.core.designsystem.theme.ThemeColorStyle
 import com.ai.phoneagent.core.designsystem.theme.ThemeMode
 import com.ai.phoneagent.net.AriesApiClient
+import com.ai.phoneagent.net.AipingApiClient
 import com.ai.phoneagent.net.AutoGlmClient
 import com.ai.phoneagent.net.ChatRequestMessage
 import com.ai.phoneagent.net.LocalMnnInferenceEngine
@@ -357,6 +358,8 @@ class FloatingChatService : LifecycleService(), SavedStateRegistryOwner {
                         AutoGlmClient.DEFAULT_BASE_URL
                     } else if (useAriesApi) {
                         AriesApiClient.ARIES_API_V1_BASE_URL
+                    } else if (useAipingApi) {
+                        AipingApiClient.AIPING_API_V1_BASE_URL
                     } else if (!useThirdParty && !useAipingApi) {
                         AutoGlmClient.DEFAULT_BASE_URL
                     } else {
@@ -367,6 +370,10 @@ class FloatingChatService : LifecycleService(), SavedStateRegistryOwner {
                         ModelScopeModelDownloader.QWEN35_MODEL_NAME
                     } else if (useAriesApi) {
                         AriesApiClient.ARIES_CHAT_MODEL
+                    } else if (useAipingApi) {
+                        appPrefsRepository.getAipingChatModelBlocking()
+                            .trim()
+                            .ifBlank { AipingApiClient.AIPING_DEFAULT_CHAT_MODEL }
                     } else if (!useThirdParty && !useAipingApi) {
                         AutoGlmClient.DEFAULT_MODEL
                     } else {

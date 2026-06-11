@@ -47,7 +47,11 @@ class AppPreferencesRepository(
         val ariesSelectedModel = stringPreferencesKey("aries_selected_model")
         val ariesApiKey = stringPreferencesKey("aries_api_key")
         val aipingLoggedInUser = stringPreferencesKey("aiping_logged_in_user")
+        val aipingAccountInfo = stringPreferencesKey("aiping_account_info")
         val aipingApiKey = stringPreferencesKey("aiping_api_key")
+        val aipingWebAccessToken = stringPreferencesKey("aiping_web_access_token")
+        val aipingChatModel = stringPreferencesKey("aiping_chat_model")
+        val aipingAutomationModel = stringPreferencesKey("aiping_automation_model")
 
         // ─── Appearance preferences ──────────────────────────────────────────
         val themeMode = stringPreferencesKey("theme_mode")
@@ -117,9 +121,24 @@ class AppPreferencesRepository(
             prefs[Keys.aipingLoggedInUser] ?: ""
         }
 
+    val aipingAccountInfoFlow: Flow<String> =
+        context.appPreferencesDataStore.data.map { prefs ->
+            prefs[Keys.aipingAccountInfo] ?: ""
+        }
+
     val aipingApiKeyFlow: Flow<String> =
         context.appPreferencesDataStore.data.map { prefs ->
             prefs[Keys.aipingApiKey] ?: ""
+        }
+
+    val aipingChatModelFlow: Flow<String> =
+        context.appPreferencesDataStore.data.map { prefs ->
+            prefs[Keys.aipingChatModel] ?: ""
+        }
+
+    val aipingAutomationModelFlow: Flow<String> =
+        context.appPreferencesDataStore.data.map { prefs ->
+            prefs[Keys.aipingAutomationModel] ?: ""
         }
 
     val apiThirdPartyBaseUrlFlow: Flow<String> =
@@ -303,6 +322,18 @@ class AppPreferencesRepository(
         return prefs[Keys.aipingLoggedInUser] ?: ""
     }
 
+    suspend fun setAipingAccountInfo(value: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            if (value.isBlank()) prefs.remove(Keys.aipingAccountInfo)
+            else prefs[Keys.aipingAccountInfo] = value
+        }
+    }
+
+    suspend fun getAipingAccountInfo(): String {
+        val prefs = context.appPreferencesDataStore.data.first()
+        return prefs[Keys.aipingAccountInfo] ?: ""
+    }
+
     suspend fun setAipingApiKey(value: String) {
         context.appPreferencesDataStore.edit { prefs ->
             if (value.isBlank()) prefs.remove(Keys.aipingApiKey)
@@ -313,6 +344,42 @@ class AppPreferencesRepository(
     suspend fun getAipingApiKey(): String {
         val prefs = context.appPreferencesDataStore.data.first()
         return prefs[Keys.aipingApiKey] ?: ""
+    }
+
+    suspend fun setAipingWebAccessToken(value: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            if (value.isBlank()) prefs.remove(Keys.aipingWebAccessToken)
+            else prefs[Keys.aipingWebAccessToken] = value
+        }
+    }
+
+    suspend fun getAipingWebAccessToken(): String {
+        val prefs = context.appPreferencesDataStore.data.first()
+        return prefs[Keys.aipingWebAccessToken] ?: ""
+    }
+
+    suspend fun setAipingChatModel(value: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            if (value.isBlank()) prefs.remove(Keys.aipingChatModel)
+            else prefs[Keys.aipingChatModel] = value
+        }
+    }
+
+    suspend fun getAipingChatModel(): String {
+        val prefs = context.appPreferencesDataStore.data.first()
+        return prefs[Keys.aipingChatModel] ?: ""
+    }
+
+    suspend fun setAipingAutomationModel(value: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            if (value.isBlank()) prefs.remove(Keys.aipingAutomationModel)
+            else prefs[Keys.aipingAutomationModel] = value
+        }
+    }
+
+    suspend fun getAipingAutomationModel(): String {
+        val prefs = context.appPreferencesDataStore.data.first()
+        return prefs[Keys.aipingAutomationModel] ?: ""
     }
 
     suspend fun getActiveAriesApiKey(): String {
@@ -589,6 +656,8 @@ class AppPreferencesRepository(
     fun setAriesApiSectionUnlockedBlocking(value: Boolean) = runBlocking { setAriesApiSectionUnlocked(value) }
     fun getAriesLoggedInUserBlocking(): String = runBlocking { getAriesLoggedInUser() }
     fun setAriesLoggedInUserBlocking(value: String) = runBlocking { setAriesLoggedInUser(value) }
+    fun getAipingAccountInfoBlocking(): String = runBlocking { getAipingAccountInfo() }
+    fun setAipingAccountInfoBlocking(value: String) = runBlocking { setAipingAccountInfo(value) }
     fun getAriesSelectedModelBlocking(): String = runBlocking { getAriesSelectedModel() }
     fun setAriesSelectedModelBlocking(value: String) = runBlocking { setAriesSelectedModel(value) }
     fun getAriesApiKeyBlocking(): String = runBlocking { getAriesApiKey() }
@@ -598,6 +667,12 @@ class AppPreferencesRepository(
     fun setAipingLoggedInUserBlocking(value: String) = runBlocking { setAipingLoggedInUser(value) }
     fun getAipingApiKeyBlocking(): String = runBlocking { getAipingApiKey() }
     fun setAipingApiKeyBlocking(value: String) = runBlocking { setAipingApiKey(value) }
+    fun getAipingWebAccessTokenBlocking(): String = runBlocking { getAipingWebAccessToken() }
+    fun setAipingWebAccessTokenBlocking(value: String) = runBlocking { setAipingWebAccessToken(value) }
+    fun getAipingChatModelBlocking(): String = runBlocking { getAipingChatModel() }
+    fun setAipingChatModelBlocking(value: String) = runBlocking { setAipingChatModel(value) }
+    fun getAipingAutomationModelBlocking(): String = runBlocking { getAipingAutomationModel() }
+    fun setAipingAutomationModelBlocking(value: String) = runBlocking { setAipingAutomationModel(value) }
     fun getApiThirdPartyBaseUrlBlocking(): String = runBlocking {
         context.appPreferencesDataStore.data.first()[Keys.apiThirdPartyBaseUrl] ?: ""
     }

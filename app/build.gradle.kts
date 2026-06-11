@@ -58,8 +58,8 @@ android {
         applicationId = "com.ai.phoneagent"
         minSdk = 30
         targetSdk = 36
-        versionCode = 17
-        versionName = "v1.4.2-xyla.alpha"
+        versionCode = 18
+        versionName = "v1.5.2-xyla.alpha"
 
         buildConfigField("String", "GITHUB_TOKEN", "\"\"")
         buildConfigField("String", "ARIES_LOGTO_ENDPOINT", "\"https://sso.aries.org.cn/\"")

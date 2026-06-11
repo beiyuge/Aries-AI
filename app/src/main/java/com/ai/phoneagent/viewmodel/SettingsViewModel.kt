@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.phoneagent.R
 import com.ai.phoneagent.data.preferences.AppPreferencesRepository
+import com.ai.phoneagent.net.AipingApiClient
 import com.ai.phoneagent.net.AipingLogtoAuthManager
 import com.ai.phoneagent.net.AriesApiClient
 import com.ai.phoneagent.net.AriesOidcAuthManager
@@ -110,7 +111,16 @@ class SettingsViewModel(
     var aipingLoggedInUser by mutableStateOf("")
         private set
 
-    // ─── Aries 已选模型 ──────────────────────────────────────────────────────
+    var aipingAccountInfo by mutableStateOf("")
+        private set
+
+    var aipingChatModel by mutableStateOf("")
+        private set
+
+    var aipingAutomationModel by mutableStateOf("")
+        private set
+
+    // ─── Aries / AI Ping 已选模型 ────────────────────────────────────────────
     var ariesSelectedModel by mutableStateOf("")
         private set
 
@@ -119,6 +129,42 @@ class SettingsViewModel(
         private set
 
     var ariesAvailableModels by mutableStateOf<List<AriesApiClient.ModelInfo>>(emptyList())
+        private set
+
+    var showAipingChatModelDialog by mutableStateOf(false)
+        private set
+
+    var showAipingAutomationModelDialog by mutableStateOf(false)
+        private set
+
+    var aipingAvailableModels by mutableStateOf<List<AipingApiClient.ModelInfo>>(emptyList())
+        private set
+
+    var aipingChatAvailableModels by mutableStateOf<List<AipingApiClient.ModelInfo>>(emptyList())
+        private set
+
+    var aipingAutomationAvailableModels by mutableStateOf<List<AipingApiClient.ModelInfo>>(emptyList())
+        private set
+
+    var aipingModelsLoading by mutableStateOf(false)
+        private set
+
+    var showAipingApiKeyConfirmDialog by mutableStateOf(false)
+        private set
+
+    var pendingAipingApiKey by mutableStateOf("")
+        private set
+
+    var pendingAipingApiKeyInput by mutableStateOf("")
+        private set
+
+    var pendingAipingDisplayName by mutableStateOf("")
+        private set
+
+    var pendingAipingAccountInfo by mutableStateOf("")
+        private set
+
+    var aipingApiKeyConfirmError by mutableStateOf<String?>(null)
         private set
 
     // ─── 登录对话框状态 ──────────────────────────────────────────────────────
@@ -166,6 +212,21 @@ class SettingsViewModel(
                 aipingLoggedInUser = user
             }
         }
+        viewModelScope.launch {
+            prefs.aipingAccountInfoFlow.collect { info ->
+                aipingAccountInfo = info
+            }
+        }
+        viewModelScope.launch {
+            prefs.aipingChatModelFlow.collect { model ->
+                aipingChatModel = model
+            }
+        }
+        viewModelScope.launch {
+            prefs.aipingAutomationModelFlow.collect { model ->
+                aipingAutomationModel = model
+            }
+        }
         // 响应式监听 Aries 已选模型
         viewModelScope.launch {
             prefs.ariesSelectedModelFlow.collect { model ->
@@ -193,7 +254,10 @@ class SettingsViewModel(
         applyApiModeState(restoredMode)
         ariesLoggedInUser = prefs.getAriesLoggedInUserBlocking()
         aipingLoggedInUser = prefs.getAipingLoggedInUserBlocking()
+        aipingAccountInfo = prefs.getAipingAccountInfoBlocking()
         ariesSelectedModel = prefs.getAriesSelectedModelBlocking()
+        aipingChatModel = prefs.getAipingChatModelBlocking()
+        aipingAutomationModel = prefs.getAipingAutomationModelBlocking()
         apiBaseUrlText = prefs.getApiThirdPartyBaseUrlBlocking().ifBlank { AutoGlmClient.DEFAULT_BASE_URL }
         apiModelText = prefs.getApiThirdPartyModelBlocking().ifBlank { AutoGlmClient.DEFAULT_MODEL }
         normalizePersistedApiModeIfNeeded(
@@ -286,14 +350,14 @@ class SettingsViewModel(
 
     fun onApiBaseUrlChange(value: String) {
         apiBaseUrlText = value
-        if (useThirdPartyApi || useAipingApi) {
+        if (useThirdPartyApi) {
             onApiConfigChanged(clearApiValue = false)
         }
     }
 
     fun onApiModelChange(value: String) {
         apiModelText = value
-        if (useThirdPartyApi || useAipingApi) {
+        if (useThirdPartyApi) {
             onApiConfigChanged(clearApiValue = false)
         }
     }
@@ -350,8 +414,8 @@ class SettingsViewModel(
                 removeApiKey = clearApiValue,
                 useThirdParty = useThirdPartyApi,
                 useLocalModel = useLocalModel,
-                thirdPartyBaseUrl = apiBaseUrlText.trim(),
-                thirdPartyModel = apiModelText.trim(),
+                thirdPartyBaseUrl = if (useThirdPartyApi) apiBaseUrlText.trim() else null,
+                thirdPartyModel = if (useThirdPartyApi) apiModelText.trim() else null,
                 clearCheckResults = true,
             )
             prefs.setUseAriesApi(useAriesApi)
@@ -403,8 +467,8 @@ class SettingsViewModel(
             }
             startApiCheck(
                 key = key,
-                baseUrl = resolveAipingApiBaseUrl(),
-                model = resolveAipingApiModel(),
+                baseUrl = AipingApiClient.AIPING_API_V1_BASE_URL,
+                model = resolveAipingChatModel(),
                 force = true,
                 onToast = onToast,
             )
@@ -597,14 +661,14 @@ class SettingsViewModel(
 
     fun resolveApiBaseUrl(): String {
         if (useAriesApi) return AriesApiClient.ARIES_API_V1_BASE_URL
-        if (useAipingApi) return resolveAipingApiBaseUrl()
+        if (useAipingApi) return AipingApiClient.AIPING_API_V1_BASE_URL
         if (useLocalModel) return AutoGlmClient.DEFAULT_BASE_URL
         return resolveRemoteApiBaseUrl()
     }
 
     fun resolveApiModel(): String {
         if (useAriesApi) return AriesApiClient.ARIES_CHAT_MODEL
-        if (useAipingApi) return resolveAipingApiModel()
+        if (useAipingApi) return resolveAipingChatModel()
         if (useLocalModel) return ModelScopeModelDownloader.QWEN35_MODEL_NAME
         return resolveRemoteApiModel()
     }
@@ -619,11 +683,11 @@ class SettingsViewModel(
         return apiModelText.trim().ifBlank { AutoGlmClient.DEFAULT_MODEL }
     }
 
-    private fun resolveAipingApiBaseUrl(): String =
-        apiBaseUrlText.trim().ifBlank { AutoGlmClient.DEFAULT_BASE_URL }
+    private fun resolveAipingChatModel(): String =
+        aipingChatModel.trim().ifBlank { AipingApiClient.AIPING_DEFAULT_CHAT_MODEL }
 
-    private fun resolveAipingApiModel(): String =
-        apiModelText.trim().ifBlank { AutoGlmClient.DEFAULT_MODEL }
+    private fun resolveAipingAutomationModel(): String =
+        aipingAutomationModel.trim().ifBlank { AipingApiClient.AIPING_DEFAULT_AUTOMATION_MODEL }
 
     fun maskKey(raw: String): String {
         if (raw.length <= 8) return raw
@@ -749,21 +813,29 @@ class SettingsViewModel(
         }
     }
 
-    fun applyAipingLoginResult(apiKey: String, displayName: String, onSuccess: (String) -> Unit) {
+    fun applyAipingLoginResult(
+        apiKey: String,
+        displayName: String,
+        accountInfo: String,
+        onSuccess: (String) -> Unit,
+    ) {
         val cleanKey = apiKey.trim()
         if (cleanKey.isBlank()) return
         viewModelScope.launch {
             prefs.setAipingApiKey(cleanKey)
             val resolvedDisplayName = displayName.ifBlank { stringRes(R.string.settings_model_api_aiping_login) }
             prefs.setAipingLoggedInUser(resolvedDisplayName)
+            prefs.setAipingAccountInfo(accountInfo.ifBlank { resolvedDisplayName })
             applyApiModeState(ApiMode.Aiping)
             persistApiModeState(clearCheckResults = true)
             aipingLoggedInUser = resolvedDisplayName
+            aipingAccountInfo = accountInfo.ifBlank { resolvedDisplayName }
             remoteApiOk = null
             remoteApiChecking = false
             lastCheckedApiKey = ""
             updateStatusText()
             onSuccess(stringRes(R.string.settings_model_api_aiping_login_success, resolvedDisplayName))
+            refreshAipingModels()
         }
     }
 
@@ -773,14 +845,105 @@ class SettingsViewModel(
             val result = aipingLogtoAuthManager.signInAndGetApiKey(activity)
             ariesLoginLoading = false
             if (result.success) {
-                applyAipingLoginResult(
+                showAipingApiKeyConfirmation(
                     apiKey = result.apiKey,
                     displayName = result.displayName,
-                    onSuccess = onSuccess,
+                    accountInfo = result.accountInfo,
                 )
+                onSuccess(stringRes(R.string.settings_model_api_aiping_api_key_confirm_pending))
             } else {
+                persistAipingAccountInfo(
+                    displayName = result.displayName,
+                    accountInfo = result.accountInfo,
+                )
                 onError(result.message.ifBlank { stringRes(R.string.settings_model_api_aiping_login_required) })
             }
+        }
+    }
+
+    private fun showAipingApiKeyConfirmation(
+        apiKey: String,
+        displayName: String,
+        accountInfo: String,
+    ) {
+        val cleanKey = apiKey.trim()
+        if (cleanKey.isBlank()) return
+        val resolvedDisplayName = displayName.ifBlank { stringRes(R.string.settings_model_api_aiping_login) }
+        pendingAipingApiKey = cleanKey
+        pendingAipingApiKeyInput = ""
+        pendingAipingDisplayName = resolvedDisplayName
+        pendingAipingAccountInfo = accountInfo.ifBlank { resolvedDisplayName }
+        aipingApiKeyConfirmError = null
+        showAipingApiKeyConfirmDialog = true
+        aipingLoggedInUser = resolvedDisplayName
+        aipingAccountInfo = accountInfo.ifBlank { resolvedDisplayName }
+        applyApiModeState(ApiMode.Aiping)
+        viewModelScope.launch {
+            prefs.setAipingLoggedInUser(resolvedDisplayName)
+            prefs.setAipingAccountInfo(accountInfo.ifBlank { resolvedDisplayName })
+            persistApiModeState(clearCheckResults = true)
+            remoteApiOk = null
+            remoteApiChecking = false
+            lastCheckedApiKey = ""
+            updateStatusText()
+        }
+    }
+
+    fun onPendingAipingApiKeyInputChange(value: String) {
+        pendingAipingApiKeyInput = value
+        aipingApiKeyConfirmError = null
+    }
+
+    fun confirmPendingAipingApiKey(
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        val expected = pendingAipingApiKey.trim()
+        val input = pendingAipingApiKeyInput.trim()
+        when {
+            expected.isBlank() -> {
+                val message = stringRes(R.string.settings_model_api_aiping_api_key_confirm_missing)
+                aipingApiKeyConfirmError = message
+                onError(message)
+            }
+            input.isBlank() -> {
+                val message = stringRes(R.string.settings_model_api_aiping_api_key_confirm_input_required)
+                aipingApiKeyConfirmError = message
+                onError(message)
+            }
+            input != expected -> {
+                val message = stringRes(R.string.settings_model_api_aiping_api_key_confirm_mismatch)
+                aipingApiKeyConfirmError = message
+                onError(message)
+            }
+            else -> {
+                val displayName = pendingAipingDisplayName
+                val accountInfo = pendingAipingAccountInfo
+                showAipingApiKeyConfirmDialog = false
+                pendingAipingApiKey = ""
+                pendingAipingApiKeyInput = ""
+                pendingAipingDisplayName = ""
+                pendingAipingAccountInfo = ""
+                aipingApiKeyConfirmError = null
+                applyAipingLoginResult(
+                    apiKey = input,
+                    displayName = displayName,
+                    accountInfo = accountInfo,
+                    onSuccess = onSuccess,
+                )
+            }
+        }
+    }
+
+    private fun persistAipingAccountInfo(displayName: String, accountInfo: String) {
+        if (displayName.isBlank() && accountInfo.isBlank()) return
+        viewModelScope.launch {
+            val resolvedDisplayName = displayName.ifBlank { stringRes(R.string.settings_model_api_aiping_login) }
+            prefs.setAipingLoggedInUser(resolvedDisplayName)
+            prefs.setAipingAccountInfo(accountInfo.ifBlank { resolvedDisplayName })
+            aipingLoggedInUser = resolvedDisplayName
+            aipingAccountInfo = accountInfo.ifBlank { resolvedDisplayName }
+            updateStatusText()
         }
     }
 
@@ -788,10 +951,27 @@ class SettingsViewModel(
         viewModelScope.launch {
             aipingLogtoAuthManager.signOut()
             prefs.setAipingLoggedInUser("")
+            prefs.setAipingAccountInfo("")
             prefs.setAipingApiKey("")
+            prefs.setAipingWebAccessToken("")
+            prefs.setAipingChatModel("")
+            prefs.setAipingAutomationModel("")
             aipingLoggedInUser = ""
+            aipingAccountInfo = ""
+            aipingChatModel = ""
+            aipingAutomationModel = ""
+            aipingAvailableModels = emptyList()
+            aipingChatAvailableModels = emptyList()
+            aipingAutomationAvailableModels = emptyList()
+            showAipingChatModelDialog = false
+            showAipingAutomationModelDialog = false
+            showAipingApiKeyConfirmDialog = false
+            pendingAipingApiKey = ""
+            pendingAipingApiKeyInput = ""
+            pendingAipingDisplayName = ""
+            pendingAipingAccountInfo = ""
+            aipingApiKeyConfirmError = null
             if (currentApiMode == ApiMode.Aiping) {
-                applyApiModeState(ApiMode.Official)
                 persistApiModeState(clearCheckResults = true)
                 remoteApiOk = null
                 remoteApiChecking = false
@@ -839,6 +1019,130 @@ class SettingsViewModel(
         showAriesModelDialog = false
         viewModelScope.launch { prefs.setAriesSelectedModel(modelId) }
         updateStatusText()
+    }
+
+    fun refreshAipingModels(onToast: ((String) -> Unit)? = null) {
+        val key = prefs.getAipingApiKeyBlocking().trim()
+        if (key.isBlank()) {
+            onToast?.invoke(stringRes(R.string.settings_model_api_aiping_login_required))
+            return
+        }
+        if (aipingModelsLoading) return
+        aipingModelsLoading = true
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { AipingApiClient.fetchModels(key) }
+            aipingModelsLoading = false
+            result.onSuccess { models ->
+                updateAipingModelLists(models)
+                onToast?.invoke(stringRes(R.string.settings_model_api_aiping_models_loaded, aipingAvailableModels.size))
+            }.onFailure { error ->
+                onToast?.invoke(
+                    stringRes(
+                        R.string.settings_model_api_aiping_models_failed,
+                        error.message.orEmpty().ifBlank { stringRes(R.string.settings_api_failed_generic) },
+                    ),
+                )
+            }
+        }
+    }
+
+    fun openAipingChatModelSelectionDialog(onToast: (String) -> Unit) {
+        openAipingModelSelectionDialog(
+            onToast = onToast,
+            modelsProvider = { aipingChatAvailableModels },
+            showDialog = { showAipingChatModelDialog = true },
+        )
+    }
+
+    fun openAipingAutomationModelSelectionDialog(onToast: (String) -> Unit) {
+        openAipingModelSelectionDialog(
+            onToast = onToast,
+            modelsProvider = { aipingAutomationAvailableModels },
+            showDialog = { showAipingAutomationModelDialog = true },
+        )
+    }
+
+    fun dismissAipingModelDialog() {
+        showAipingChatModelDialog = false
+        showAipingAutomationModelDialog = false
+    }
+
+    fun selectAipingChatModel(modelId: String) {
+        aipingChatModel = modelId
+        showAipingChatModelDialog = false
+        viewModelScope.launch { prefs.setAipingChatModel(modelId) }
+        remoteApiOk = null
+        updateStatusText()
+    }
+
+    fun selectAipingAutomationModel(modelId: String) {
+        aipingAutomationModel = modelId
+        showAipingAutomationModelDialog = false
+        viewModelScope.launch { prefs.setAipingAutomationModel(modelId) }
+    }
+
+    private fun openAipingModelSelectionDialog(
+        onToast: (String) -> Unit,
+        modelsProvider: () -> List<AipingApiClient.ModelInfo>,
+        showDialog: () -> Unit,
+    ) {
+        if (modelsProvider().isNotEmpty()) {
+            showDialog()
+            return
+        }
+        val key = prefs.getAipingApiKeyBlocking().trim()
+        if (key.isBlank()) {
+            onToast(stringRes(R.string.settings_model_api_aiping_login_required))
+            return
+        }
+        if (aipingModelsLoading) {
+            onToast(stringRes(R.string.settings_model_api_aiping_models_loading))
+            return
+        }
+        aipingModelsLoading = true
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { AipingApiClient.fetchModels(key) }
+            aipingModelsLoading = false
+            result.onSuccess { models ->
+                updateAipingModelLists(models)
+                if (modelsProvider().isEmpty()) {
+                    onToast(stringRes(R.string.settings_model_api_aiping_models_empty))
+                } else {
+                    showDialog()
+                }
+            }.onFailure { error ->
+                onToast(
+                    stringRes(
+                        R.string.settings_model_api_aiping_models_failed,
+                        error.message.orEmpty().ifBlank { stringRes(R.string.settings_api_failed_generic) },
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun updateAipingModelLists(models: List<AipingApiClient.ModelInfo>) {
+        aipingAvailableModels = models
+        aipingChatAvailableModels = AipingApiClient.chatModels(models)
+        aipingAutomationAvailableModels = AipingApiClient.automationVisionModels(models)
+        ensureAipingModelDefaults()
+    }
+
+    private fun ensureAipingModelDefaults() {
+        val defaultChatModel =
+            aipingChatAvailableModels.firstOrNull { it.id.equals(AipingApiClient.AIPING_DEFAULT_CHAT_MODEL, ignoreCase = true) }?.id
+                ?: aipingChatAvailableModels.firstOrNull()?.id.orEmpty()
+        if ((aipingChatModel.isBlank() || aipingChatModel == "DeepSeek-R1-0528") && defaultChatModel.isNotBlank()) {
+            aipingChatModel = defaultChatModel
+            viewModelScope.launch { prefs.setAipingChatModel(defaultChatModel) }
+        }
+        val defaultAutomationModel =
+            aipingAutomationAvailableModels.firstOrNull { it.id.equals(AipingApiClient.AIPING_DEFAULT_AUTOMATION_MODEL, ignoreCase = true) }?.id
+                ?: aipingAutomationAvailableModels.firstOrNull()?.id.orEmpty()
+        if ((aipingAutomationModel.isBlank() || aipingAutomationModel == "DeepSeek-R1-0528") && defaultAutomationModel.isNotBlank()) {
+            aipingAutomationModel = defaultAutomationModel
+            viewModelScope.launch { prefs.setAipingAutomationModel(defaultAutomationModel) }
+        }
     }
 
     private fun resolveApiMode(

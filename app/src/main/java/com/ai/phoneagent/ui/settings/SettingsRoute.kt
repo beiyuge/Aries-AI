@@ -24,12 +24,17 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,8 +50,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.Lifecycle
@@ -73,7 +82,11 @@ fun SettingsRoute(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val density = LocalDensity.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var isExitingSettingsRoute by remember { mutableStateOf(false) }
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
 
     val exitSettingsRoute = remember(navController) {
         exitSettingsRoute@{
@@ -100,7 +113,12 @@ fun SettingsRoute(
     val isSubPage = viewModel.currentPage != SettingsViewModel.SettingsPage.Home
     if (isSubPage) {
         BackHandler {
-            viewModel.openHomePage()
+            if (imeVisible) {
+                keyboardController?.hide()
+                focusManager.clearFocus(force = true)
+            } else {
+                viewModel.openHomePage()
+            }
         }
     }
 
@@ -154,7 +172,21 @@ fun SettingsRoute(
                     ariesLoggedInUser = viewModel.ariesLoggedInUser,
                     ariesSelectedModel = viewModel.ariesSelectedModel,
                     aipingLoggedInUser = viewModel.aipingLoggedInUser,
+                    aipingAccountInfo = viewModel.aipingAccountInfo,
+                    aipingChatModel = viewModel.aipingChatModel,
+                    aipingAutomationModel = viewModel.aipingAutomationModel,
+                    aipingModelsLoading = viewModel.aipingModelsLoading,
                     onChangeAriesModel = { viewModel.openAriesModelSelectionDialog() },
+                    onAipingChatModelClick = {
+                        viewModel.openAipingChatModelSelectionDialog { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    onAipingAutomationModelClick = {
+                        viewModel.openAipingAutomationModelSelectionDialog { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    },
                     onBack = { viewModel.openHomePage() },
                     onApiModeChange = { mode ->
                         viewModel.onApiModeChange(mode) { message ->
@@ -244,6 +276,45 @@ fun SettingsRoute(
                         },
                     )
                 }
+                if (viewModel.showAipingChatModelDialog) {
+                    AipingModelSelectionDialog(
+                        title = stringResource(com.ai.phoneagent.R.string.settings_model_api_aiping_chat_model_title),
+                        models = viewModel.aipingChatAvailableModels.map { it.id },
+                        onSelect = { model -> viewModel.selectAipingChatModel(model) },
+                        onDismiss = { viewModel.dismissAipingModelDialog() },
+                    )
+                }
+                if (viewModel.showAipingAutomationModelDialog) {
+                    AipingModelSelectionDialog(
+                        title = stringResource(com.ai.phoneagent.R.string.settings_model_api_aiping_automation_model_title),
+                        models = viewModel.aipingAutomationAvailableModels.map { it.id },
+                        onSelect = { model -> viewModel.selectAipingAutomationModel(model) },
+                        onDismiss = { viewModel.dismissAipingModelDialog() },
+                    )
+                }
+                if (viewModel.showAipingApiKeyConfirmDialog) {
+                    AipingApiKeyConfirmDialog(
+                        apiKey = viewModel.pendingAipingApiKey,
+                        input = viewModel.pendingAipingApiKeyInput,
+                        error = viewModel.aipingApiKeyConfirmError,
+                        onInputChange = { value -> viewModel.onPendingAipingApiKeyInputChange(value) },
+                        onCopy = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            clipboard?.setPrimaryClip(ClipData.newPlainText("AI Ping API Key", viewModel.pendingAipingApiKey))
+                            Toast.makeText(
+                                context,
+                                context.getString(com.ai.phoneagent.R.string.settings_model_api_aiping_api_key_copied),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                        onConfirm = {
+                            viewModel.confirmPendingAipingApiKey(
+                                onSuccess = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() },
+                                onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() },
+                            )
+                        },
+                    )
+                }
             }
 
             SettingsViewModel.SettingsPage.Membership -> {
@@ -266,6 +337,119 @@ fun SettingsRoute(
             }
         }
     }
+}
+
+@Composable
+private fun AipingApiKeyConfirmDialog(
+    apiKey: String,
+    input: String,
+    error: String?,
+    onInputChange: (String) -> Unit,
+    onCopy: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(com.ai.phoneagent.R.string.settings_model_api_aiping_api_key_confirm_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(dimensionResource(DesignR.dimen.m3t_spacing_sm))) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(dimensionResource(DesignR.dimen.m3t_spacing_sm)),
+                ) {
+                    Text(
+                        text = maskedAipingApiKey(apiKey),
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onCopy) {
+                        Text(stringResource(com.ai.phoneagent.R.string.settings_model_api_aiping_api_key_copy))
+                    }
+                }
+                Text(
+                    text = "↓",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = onInputChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(com.ai.phoneagent.R.string.settings_model_api_aiping_api_key_input_label)) },
+                    singleLine = true,
+                    isError = error != null,
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Done,
+                        ),
+                    keyboardActions =
+                        KeyboardActions(
+                            onDone = {
+                                keyboardController?.hide()
+                                focusManager.clearFocus(force = true)
+                            },
+                        ),
+                    supportingText = {
+                        if (error != null) {
+                            Text(error)
+                        }
+                    },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(com.ai.phoneagent.R.string.settings_model_api_aiping_api_key_confirm_action))
+            }
+        },
+    )
+}
+
+private fun maskedAipingApiKey(apiKey: String): String {
+    val clean = apiKey.trim()
+    if (clean.length <= 12) return "*".repeat(clean.length.coerceAtLeast(1))
+    return clean.take(6) + "*".repeat((clean.length - 12).coerceAtLeast(6)) + clean.takeLast(6)
+}
+
+@Composable
+private fun AipingModelSelectionDialog(
+    title: String,
+    models: List<String>,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            LazyColumn {
+                items(models) { model ->
+                    Text(
+                        text = model,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(model) }
+                            .then(
+                                Modifier.height(
+                                    dimensionResource(DesignR.dimen.m3t_compact_button_height),
+                                ),
+                            ),
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(SettingsR.string.action_cancel))
+            }
+        },
+    )
 }
 
 // ── About content embedded in Settings ───────────────────────────────────────

@@ -88,6 +88,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.ai.phoneagent.net.AriesApiClient
+import com.ai.phoneagent.net.AipingApiClient
 import com.ai.phoneagent.net.AutoGlmClient
 import com.ai.phoneagent.net.ChatRequestMessage
 import com.ai.phoneagent.net.LocalMnnInferenceEngine
@@ -2799,6 +2800,7 @@ class MainActivity : AppCompatActivity() {
             return AutoGlmClient.DEFAULT_BASE_URL
         }
         if (useAriesApi) return AriesApiClient.ARIES_API_V1_BASE_URL
+        if (useAipingApi) return AipingApiClient.AIPING_API_V1_BASE_URL
         if (!useThirdPartyApi && !useAipingApi) return AutoGlmClient.DEFAULT_BASE_URL
         val rawUrl = apiBaseUrl
         return normalizeBaseUrlInput(rawUrl) ?: AutoGlmClient.DEFAULT_BASE_URL
@@ -2852,6 +2854,11 @@ class MainActivity : AppCompatActivity() {
             } else {
                 AriesApiClient.ARIES_CHAT_MODEL
             }
+        }
+        if (useAipingApi) {
+            return appPrefsRepository.getAipingChatModelBlocking()
+                .trim()
+                .ifBlank { AipingApiClient.AIPING_DEFAULT_CHAT_MODEL }
         }
         if (!useThirdPartyApi && !useAipingApi) return AutoGlmClient.DEFAULT_MODEL
         return apiModel.trim().ifBlank { AutoGlmClient.DEFAULT_MODEL }
