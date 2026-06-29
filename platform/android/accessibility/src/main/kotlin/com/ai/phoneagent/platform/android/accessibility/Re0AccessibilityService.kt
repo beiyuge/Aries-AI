@@ -3,12 +3,16 @@ package com.ai.phoneagent.platform.android.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.os.Bundle
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.ai.phoneagent.core.capability.CapabilityError
 import com.ai.phoneagent.core.capability.InputResult
-import com.ai.phoneagent.core.capability.ScreenPoint
+import com.ai.phoneagent.core.capability.SwipeRequest
 import com.ai.phoneagent.core.capability.TapRequest
+import com.ai.phoneagent.core.capability.TypeTextRequest
+import com.ai.phoneagent.core.capability.KeyRequest
 import com.ai.phoneagent.core.capability.UiTreeDetail
 import com.ai.phoneagent.core.capability.UiTreeDumpRequest
 import com.ai.phoneagent.core.capability.UiTreeDumpResult
@@ -31,7 +35,14 @@ class Re0AccessibilityService : AccessibilityService() {
     }
 }
 
-object Re0AccessibilityBridge {
+interface AccessibilityInputBackend {
+    suspend fun tap(request: TapRequest): InputResult
+    suspend fun swipe(request: SwipeRequest): InputResult
+    suspend fun typeText(request: TypeTextRequest): InputResult
+    suspend fun key(request: KeyRequest): InputResult
+}
+
+object Re0AccessibilityBridge : AccessibilityInputBackend {
     private var serviceRef: WeakReference<Re0AccessibilityService>? = null
 
     fun attach(service: Re0AccessibilityService) {
@@ -78,7 +89,7 @@ object Re0AccessibilityBridge {
         )
     }
 
-    suspend fun tap(request: TapRequest): InputResult {
+    override suspend fun tap(request: TapRequest): InputResult {
         val service = serviceRef?.get()
             ?: return InputResult(
                 backend = "accessibility",
@@ -89,23 +100,126 @@ object Re0AccessibilityBridge {
                     recoverable = true,
                 ),
             )
-        return service.dispatchTap(request.point)
+        return service.dispatchGesturePath(
+            path = Path().apply {
+                moveTo(request.point.x.toFloat(), request.point.y.toFloat())
+            },
+            startTimeMs = 0,
+            durationMs = 1,
+        )
     }
 
-    private suspend fun Re0AccessibilityService.dispatchTap(point: ScreenPoint): InputResult =
+    override suspend fun swipe(request: SwipeRequest): InputResult {
+        val service = serviceRef?.get()
+            ?: return disconnectedInputResult()
+        val path = Path().apply {
+            moveTo(request.from.x.toFloat(), request.from.y.toFloat())
+            lineTo(request.to.x.toFloat(), request.to.y.toFloat())
+        }
+        return service.dispatchGesturePath(
+            path = path,
+            startTimeMs = 0,
+            durationMs = request.durationMs,
+        )
+    }
+
+    override suspend fun typeText(request: TypeTextRequest): InputResult {
+        val service = serviceRef?.get()
+            ?: return disconnectedInputResult()
+        val focusedNode = service.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            ?: return InputResult(
+                backend = "accessibility",
+                durationMs = 0,
+                error = CapabilityError(
+                    code = "input.focus_missing",
+                    message = "No focused editable node is available for text input.",
+                    recoverable = true,
+                ),
+            )
+        val args = Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, request.text)
+        }
+        val startedAt = System.currentTimeMillis()
+        val performed = focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        focusedNode.recycle()
+        return if (performed) {
+            InputResult(
+                backend = "accessibility",
+                durationMs = System.currentTimeMillis() - startedAt,
+            )
+        } else {
+            InputResult(
+                backend = "accessibility",
+                durationMs = System.currentTimeMillis() - startedAt,
+                error = CapabilityError(
+                    code = "input.type_text_rejected",
+                    message = "Focused node rejected ACTION_SET_TEXT.",
+                    recoverable = true,
+                ),
+            )
+        }
+    }
+
+    override suspend fun key(request: KeyRequest): InputResult {
+        val service = serviceRef?.get()
+            ?: return disconnectedInputResult()
+        val action = when (request.keyCode) {
+            KeyEvent.KEYCODE_BACK -> AccessibilityService.GLOBAL_ACTION_BACK
+            KeyEvent.KEYCODE_HOME -> AccessibilityService.GLOBAL_ACTION_HOME
+            KeyEvent.KEYCODE_APP_SWITCH -> AccessibilityService.GLOBAL_ACTION_RECENTS
+            KeyEvent.KEYCODE_NOTIFICATION -> AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
+            KeyEvent.KEYCODE_SETTINGS -> AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS
+            else -> null
+        } ?: return InputResult(
+            backend = "accessibility",
+            durationMs = 0,
+            error = CapabilityError(
+                code = "input.key_unsupported",
+                message = "Accessibility backend supports only global navigation key actions.",
+                recoverable = true,
+            ),
+        )
+        val startedAt = System.currentTimeMillis()
+        val performed = service.performGlobalAction(action)
+        return if (performed) {
+            InputResult(
+                backend = "accessibility",
+                durationMs = System.currentTimeMillis() - startedAt,
+            )
+        } else {
+            InputResult(
+                backend = "accessibility",
+                durationMs = System.currentTimeMillis() - startedAt,
+                error = CapabilityError(
+                    code = "input.global_action_rejected",
+                    message = "Accessibility rejected the requested global key action.",
+                    recoverable = true,
+                ),
+            )
+        }
+    }
+
+    private suspend fun Re0AccessibilityService.dispatchGesturePath(
+        path: Path,
+        startTimeMs: Long,
+        durationMs: Long,
+    ): InputResult =
         suspendCancellableCoroutine { continuation ->
-            val path = Path().apply {
-                moveTo(point.x.toFloat(), point.y.toFloat())
-            }
+            val startedAt = System.currentTimeMillis()
             val gesture = GestureDescription.Builder()
-                .addStroke(GestureDescription.StrokeDescription(path, 0, 1))
+                .addStroke(GestureDescription.StrokeDescription(path, startTimeMs, durationMs))
                 .build()
             val dispatched = dispatchGesture(
                 gesture,
                 object : AccessibilityService.GestureResultCallback() {
                     override fun onCompleted(gestureDescription: GestureDescription?) {
                         if (continuation.isActive) {
-                            continuation.resume(InputResult(backend = "accessibility", durationMs = 1))
+                            continuation.resume(
+                                InputResult(
+                                    backend = "accessibility",
+                                    durationMs = System.currentTimeMillis() - startedAt,
+                                ),
+                            )
                         }
                     }
 
@@ -141,6 +255,16 @@ object Re0AccessibilityBridge {
                 )
             }
         }
+
+    private fun disconnectedInputResult(): InputResult = InputResult(
+        backend = "accessibility",
+        durationMs = 0,
+        error = CapabilityError(
+            code = "accessibility.service_disconnected",
+            message = "Accessibility service is not connected.",
+            recoverable = true,
+        ),
+    )
 }
 
 private fun appendNodeJson(
