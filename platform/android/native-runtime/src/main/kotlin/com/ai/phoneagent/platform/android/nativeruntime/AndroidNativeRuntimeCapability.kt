@@ -1,6 +1,5 @@
 package com.ai.phoneagent.platform.android.nativeruntime
 
-import android.os.Build
 import com.ai.phoneagent.core.capability.CapabilityHealth
 import com.ai.phoneagent.core.capability.CapabilityId
 import com.ai.phoneagent.core.capability.CapabilityIds
@@ -22,23 +21,4 @@ class AndroidNativeRuntimeCapability(
         val info = probe.inspect()
         return CapabilityResult.success("${id.value}: ${info.platform} sdk=${info.sdkInt ?: "unknown"} abi=${info.supportedAbis.joinToString()}")
     }
-}
-
-interface NativeRuntimeProbe {
-    fun inspect(): NativeRuntimeInfo
-}
-
-object AndroidNativeRuntimeProbe : NativeRuntimeProbe {
-    override fun inspect(): NativeRuntimeInfo = NativeRuntimeInfo(
-        platform = "android",
-        osVersion = Build.VERSION.RELEASE ?: "",
-        sdkInt = Build.VERSION.SDK_INT,
-        supportedAbis = Build.SUPPORTED_ABIS.toList(),
-        diagnostics = mapOf(
-            "platform" to "android",
-            "backend" to "android-runtime",
-            "manufacturer" to Build.MANUFACTURER.orEmpty(),
-            "model" to Build.MODEL.orEmpty(),
-        ),
-    )
 }
