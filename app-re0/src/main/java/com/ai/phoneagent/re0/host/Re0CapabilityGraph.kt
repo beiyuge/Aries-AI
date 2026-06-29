@@ -1,59 +1,35 @@
 package com.ai.phoneagent.re0.host
 
-import com.ai.phoneagent.core.capability.Capability
-import com.ai.phoneagent.core.capability.CapabilityError
-import com.ai.phoneagent.core.capability.CapabilityHealth
-import com.ai.phoneagent.core.capability.CapabilityId
-import com.ai.phoneagent.core.capability.CapabilityIds
-import com.ai.phoneagent.core.capability.CapabilityState
+import android.content.Context
 import com.ai.phoneagent.platform.android.capability.AndroidCapabilityRegistry
-import com.ai.phoneagent.platform.android.permissions.PermissionRequirementCatalog
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.ai.phoneagent.platform.android.accessibility.AndroidAccessibilityCapability
+import com.ai.phoneagent.platform.android.accessibility.AndroidAccessibilityServiceStatus
+import com.ai.phoneagent.platform.android.accessibility.AndroidUiTreeCapability
+import com.ai.phoneagent.platform.android.background.AndroidBackgroundTasksCapability
+import com.ai.phoneagent.platform.android.floating.AndroidFloatingWindowCapability
+import com.ai.phoneagent.platform.android.input.AndroidInputInjectionCapability
+import com.ai.phoneagent.platform.android.nativeruntime.AndroidNativeRuntimeCapability
+import com.ai.phoneagent.platform.android.permissions.AndroidPermissionsCapability
+import com.ai.phoneagent.platform.android.screen.AndroidScreenCaptureCapability
+import com.ai.phoneagent.platform.android.shizuku.AndroidShizukuShellCapability
+import com.ai.phoneagent.platform.android.virtualdisplay.AndroidVirtualDisplayCapability
 
 object Re0CapabilityGraph {
-    fun createRegistry(): AndroidCapabilityRegistry = AndroidCapabilityRegistry(
-        listOf(
-            PermissionsCapability(),
-            PlaceholderCapability(CapabilityIds.ShizukuShell, "Shizuku shell plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.Accessibility, "Accessibility service plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.ScreenCapture, "Screen capture plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.UiTree, "UI tree plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.InputInjection, "Input injection plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.VirtualDisplay, "Virtual display plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.FloatingWindow, "Floating window plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.BackgroundTasks, "Background task plugin is not implemented yet."),
-            PlaceholderCapability(CapabilityIds.NativeRuntime, "Native runtime plugin is not implemented yet."),
-        ),
-    )
-}
-
-private class PermissionsCapability : Capability {
-    override val id: CapabilityId = CapabilityIds.Permissions
-
-    override val health: StateFlow<CapabilityHealth> = MutableStateFlow(
-        CapabilityHealth.permissionRequired(
-            id = id,
-            missingRequirements = PermissionRequirementCatalog.defaultRequirements(),
-            diagnostics = mapOf("source" to "PermissionRequirementCatalog"),
-        ),
-    )
-}
-
-private class PlaceholderCapability(
-    override val id: CapabilityId,
-    message: String,
-) : Capability {
-    override val health: StateFlow<CapabilityHealth> = MutableStateFlow(
-        CapabilityHealth(
-            id = id,
-            available = false,
-            state = CapabilityState.Unavailable,
-            lastError = CapabilityError(
-                code = "not_implemented",
-                message = message,
-                recoverable = true,
+    fun createRegistry(context: Context): AndroidCapabilityRegistry {
+        val accessibilityStatus = AndroidAccessibilityServiceStatus(context.applicationContext)
+        return AndroidCapabilityRegistry(
+            listOf(
+                AndroidPermissionsCapability(),
+                AndroidShizukuShellCapability(),
+                AndroidAccessibilityCapability(accessibilityStatus),
+                AndroidScreenCaptureCapability(),
+                AndroidUiTreeCapability(accessibilityStatus),
+                AndroidInputInjectionCapability(accessibilityStatus),
+                AndroidVirtualDisplayCapability(),
+                AndroidFloatingWindowCapability(),
+                AndroidBackgroundTasksCapability(),
+                AndroidNativeRuntimeCapability(),
             ),
-        ),
-    )
+        )
+    }
 }

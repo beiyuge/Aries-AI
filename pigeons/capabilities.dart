@@ -10,16 +10,20 @@ class CapabilityHealthDto {
   CapabilityHealthDto({
     required this.id,
     required this.available,
+    required this.supported,
     required this.state,
     required this.missingRequirements,
+    required this.diagnostics,
     this.lastErrorCode,
     this.lastErrorMessage,
   });
 
   String id;
   bool available;
+  bool supported;
   String state;
   List<String> missingRequirements;
+  List<String> diagnostics;
   String? lastErrorCode;
   String? lastErrorMessage;
 }

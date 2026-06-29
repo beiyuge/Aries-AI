@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="re0_accessibility_label">Aries AI re0 Automation</string>
+    <string name="re0_accessibility_description">Allows Aries AI re0 to inspect the screen and perform automation gestures.</string>
+</resources>

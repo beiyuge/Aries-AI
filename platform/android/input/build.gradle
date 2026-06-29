@@ -23,5 +23,8 @@ android {
 
 dependencies {
     implementation project(':core:capability-api')
+    implementation project(':platform:android:accessibility')
     implementation libs.androidx.core.ktx
+    testImplementation libs.kotlinx.coroutines.core
+    testImplementation libs.junit
 }

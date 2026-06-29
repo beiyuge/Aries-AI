@@ -52,4 +52,33 @@ class CapabilityApiContractTest {
         assertEquals(error, result.errorOrNull())
         assertEquals("shizuku.unavailable", result.errorOrNull()?.code)
     }
+
+    @Test
+    fun `unsupported health is unavailable and not supported`() {
+        val health = CapabilityHealth.unsupported(
+            id = CapabilityId("desktop.virtual.display"),
+            reason = "Virtual display is not available on this platform.",
+        )
+
+        assertFalse(health.available)
+        assertFalse(health.supported)
+        assertEquals(CapabilityState.Unsupported, health.state)
+        assertEquals("capability.unsupported", health.lastError?.code)
+    }
+
+    @Test
+    fun `degraded health remains available with an attached diagnostic error`() {
+        val error = CapabilityError(
+            code = "screen.partial",
+            message = "Only the default display can be captured.",
+            recoverable = true,
+        )
+
+        val health = CapabilityHealth.degraded(CapabilityId("screen.capture"), error)
+
+        assertTrue(health.available)
+        assertTrue(health.supported)
+        assertEquals(CapabilityState.Degraded, health.state)
+        assertEquals(error, health.lastError)
+    }
 }

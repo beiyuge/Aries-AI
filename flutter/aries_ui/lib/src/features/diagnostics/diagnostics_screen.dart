@@ -90,19 +90,30 @@ class _CapabilityTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final statusColor = health.available ? colorScheme.primary : colorScheme.error;
+    final statusColor = health.available
+        ? colorScheme.primary
+        : health.supported
+            ? colorScheme.error
+            : colorScheme.outline;
     final missingText = health.missingRequirements.isEmpty
         ? health.lastErrorMessage ?? 'No missing requirements reported'
         : health.missingRequirements.join('\n');
+    final diagnosticsText = health.diagnostics.isEmpty
+        ? ''
+        : '\n${health.diagnostics.join('\n')}';
 
     return Card(
       child: ListTile(
         leading: Icon(
-          health.available ? Icons.check_circle_outline : Icons.error_outline,
+          health.available
+              ? Icons.check_circle_outline
+              : health.supported
+                  ? Icons.error_outline
+                  : Icons.do_not_disturb_on_outlined,
           color: statusColor,
         ),
         title: Text(health.id),
-        subtitle: Text('${health.state}\n$missingText'),
+        subtitle: Text('${health.state}\n$missingText$diagnosticsText'),
         isThreeLine: true,
         trailing: Wrap(
           spacing: 4,

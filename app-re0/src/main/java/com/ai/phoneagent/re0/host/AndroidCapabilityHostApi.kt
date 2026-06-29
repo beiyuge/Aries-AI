@@ -8,6 +8,7 @@ import android.provider.Settings
 import com.ai.phoneagent.core.capability.CapabilityAction
 import com.ai.phoneagent.core.capability.CapabilityHealth
 import com.ai.phoneagent.core.capability.CapabilityId
+import com.ai.phoneagent.core.capability.CapabilitySelfTest
 import com.ai.phoneagent.platform.android.capability.AndroidCapabilityRegistry
 import com.ai.phoneagent.re0.generated.CapabilityHealthDto
 import com.ai.phoneagent.re0.generated.CapabilityHostApi
@@ -26,6 +27,20 @@ class AndroidCapabilityHostApi(
         healthFor(id).toDto()
 
     override fun runCapabilitySelfTest(id: String): String {
+        val capability = registry.get(CapabilityId(id))
+            ?: throw FlutterError(
+                code = "capability_not_found",
+                message = "Capability '$id' is not registered.",
+            )
+        if (capability is CapabilitySelfTest) {
+            val result = capability.runSelfTest()
+            return result.getOrNull()?.toString()
+                ?: result.errorOrNull()?.let { error ->
+                    "${capability.id.value}: ${error.code} ${error.message}"
+                }
+                ?: "${capability.id.value}: self-test returned no result"
+        }
+
         val health = healthFor(id)
         return if (health.available) {
             "${health.id.value}: ${health.state.name}"
@@ -62,10 +77,12 @@ class AndroidCapabilityHostApi(
     private fun CapabilityHealth.toDto(): CapabilityHealthDto = CapabilityHealthDto(
         id = id.value,
         available = available,
+        supported = supported,
         state = state.name,
         missingRequirements = missingRequirements.map { requirement ->
             "${requirement.id}: ${requirement.title}"
         },
+        diagnostics = diagnostics.entries.map { (key, value) -> "$key=$value" },
         lastErrorCode = lastError?.code,
         lastErrorMessage = lastError?.message,
     )

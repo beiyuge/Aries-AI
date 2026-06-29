@@ -19,8 +19,10 @@ class CapabilityHealthDto {
   CapabilityHealthDto({
     required this.id,
     required this.available,
+    required this.supported,
     required this.state,
     required this.missingRequirements,
+    required this.diagnostics,
     this.lastErrorCode,
     this.lastErrorMessage,
   });
@@ -29,9 +31,13 @@ class CapabilityHealthDto {
 
   bool available;
 
+  bool supported;
+
   String state;
 
   List<String> missingRequirements;
+
+  List<String> diagnostics;
 
   String? lastErrorCode;
 
@@ -41,8 +47,10 @@ class CapabilityHealthDto {
     return <Object?>[
       id,
       available,
+      supported,
       state,
       missingRequirements,
+      diagnostics,
       lastErrorCode,
       lastErrorMessage,
     ];
@@ -53,10 +61,12 @@ class CapabilityHealthDto {
     return CapabilityHealthDto(
       id: result[0]! as String,
       available: result[1]! as bool,
-      state: result[2]! as String,
-      missingRequirements: (result[3] as List<Object?>?)!.cast<String>(),
-      lastErrorCode: result[4] as String?,
-      lastErrorMessage: result[5] as String?,
+      supported: result[2]! as bool,
+      state: result[3]! as String,
+      missingRequirements: (result[4] as List<Object?>?)!.cast<String>(),
+      diagnostics: (result[5] as List<Object?>?)!.cast<String>(),
+      lastErrorCode: result[6] as String?,
+      lastErrorMessage: result[7] as String?,
     );
   }
 }

@@ -50,8 +50,10 @@ class FlutterError (
 data class CapabilityHealthDto (
   val id: String,
   val available: Boolean,
+  val supported: Boolean,
   val state: String,
   val missingRequirements: List<String>,
+  val diagnostics: List<String>,
   val lastErrorCode: String? = null,
   val lastErrorMessage: String? = null
 )
@@ -60,19 +62,23 @@ data class CapabilityHealthDto (
     fun fromList(pigeonVar_list: List<Any?>): CapabilityHealthDto {
       val id = pigeonVar_list[0] as String
       val available = pigeonVar_list[1] as Boolean
-      val state = pigeonVar_list[2] as String
-      val missingRequirements = pigeonVar_list[3] as List<String>
-      val lastErrorCode = pigeonVar_list[4] as String?
-      val lastErrorMessage = pigeonVar_list[5] as String?
-      return CapabilityHealthDto(id, available, state, missingRequirements, lastErrorCode, lastErrorMessage)
+      val supported = pigeonVar_list[2] as Boolean
+      val state = pigeonVar_list[3] as String
+      val missingRequirements = pigeonVar_list[4] as List<String>
+      val diagnostics = pigeonVar_list[5] as List<String>
+      val lastErrorCode = pigeonVar_list[6] as String?
+      val lastErrorMessage = pigeonVar_list[7] as String?
+      return CapabilityHealthDto(id, available, supported, state, missingRequirements, diagnostics, lastErrorCode, lastErrorMessage)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       id,
       available,
+      supported,
       state,
       missingRequirements,
+      diagnostics,
       lastErrorCode,
       lastErrorMessage,
     )

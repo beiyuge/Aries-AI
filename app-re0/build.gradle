@@ -35,6 +35,14 @@ dependencies {
     implementation project(':core:capability-api')
     implementation project(':platform:android:capability-runtime')
     implementation project(':platform:android:permissions')
+    implementation project(':platform:android:shizuku')
+    implementation project(':platform:android:accessibility')
+    implementation project(':platform:android:screen')
+    implementation project(':platform:android:input')
+    implementation project(':platform:android:virtualdisplay')
+    implementation project(':platform:android:floating')
+    implementation project(':platform:android:background')
+    implementation project(':platform:android:native-runtime')
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat
     implementation libs.androidx.lifecycle.runtime.ktx

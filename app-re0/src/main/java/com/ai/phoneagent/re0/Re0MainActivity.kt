@@ -9,7 +9,7 @@ import com.ai.phoneagent.re0.host.Re0CapabilityGraph
 
 class Re0MainActivity : FlutterActivity() {
     private val capabilityRegistry by lazy {
-        Re0CapabilityGraph.createRegistry()
+        Re0CapabilityGraph.createRegistry(this)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
