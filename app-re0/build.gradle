@@ -1,0 +1,42 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    id 'dev.flutter.flutter-gradle-plugin'
+}
+
+android {
+    namespace 'com.ai.phoneagent.re0'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.ai.phoneagent.re0'
+        minSdk 30
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0-re0'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+flutter {
+    source '../flutter/aries_ui'
+}
+
+dependencies {
+    implementation project(':core:capability-api')
+    implementation project(':platform:android:capability-runtime')
+    implementation project(':platform:android:permissions')
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.lifecycle.runtime.ktx
+    implementation libs.material
+}

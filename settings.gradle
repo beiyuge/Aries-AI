@@ -1,0 +1,48 @@
+pluginManagement {
+    def flutterSdkPath = providers.gradleProperty('flutter.sdk').orNull
+    if (flutterSdkPath == null) {
+        flutterSdkPath = System.getenv('FLUTTER_ROOT') ?: System.getenv('FLUTTER_HOME')
+    }
+    if (flutterSdkPath == null) {
+        def localPropertiesFile = file('local.properties')
+        if (localPropertiesFile.exists()) {
+            def localProperties = new Properties()
+            localPropertiesFile.withInputStream { localProperties.load(it) }
+            flutterSdkPath = localProperties.getProperty('flutter.sdk')
+        }
+    }
+    if (flutterSdkPath != null) {
+        includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'Aries AI re0'
+
+include ':core:foundation'
+include ':core:domain'
+include ':core:capability-api'
+include ':core:capability-test'
+include ':platform:android:capability-runtime'
+include ':platform:android:permissions'
+include ':platform:android:shizuku'
+include ':platform:android:accessibility'
+include ':platform:android:screen'
+include ':platform:android:input'
+include ':platform:android:virtualdisplay'
+include ':platform:android:floating'
+include ':platform:android:background'
+include ':platform:android:native-runtime'
+include ':app-re0'

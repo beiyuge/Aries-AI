@@ -1,81 +1,13 @@
-# OS / editor files
-.DS_Store
-*.iml
-.idea/
-.kotlin/
-.vscode/
-wiki/
-
-# Android / Gradle local state
-.android/
-.cxx/
-.externalNativeBuild/
+# re0 clean-room branch
 .gradle/
-.gradle-build/
-captures/
-local.properties
-release/
+build/
 **/build/
-
-# Local environment, temp files, and logs
-.env
-.env.*
-!.env.example
-*.bak*
-*.log
-**/logs/
-/temp/
-.tmp_material_113/
-.tmp_material_113.zip
-.trae/documents/
-
-# Signing keys and certificates
-*.jks
-*.keystore
-*.p12
-*.pem
-*.pfx
-
-# Packaged build artifacts
-*.aab
-*.aar
-*.apk
-
-# Large local model assets
-app/src/main/assets/sherpa-models/**
-!app/src/main/assets/sherpa-models/.keep
-!app/src/main/assets/sherpa-models/README.md
-
-# Local latex library source clone (using Maven dependency instead)
-/latex/
-
-# Local tool configs and secrets
-.opencode/
-AGENTS.md
-analytics.settings
-key/key
-.tmp_material_113/
-.tmp_material_113.zip
-tmp_onboarding_check.png
-
-# Local planning / scratch workspace files
-.sisyphus/
-.qoder/
-nul
-
-# Local test artifacts / temporary outputs
-build.log
-*.tmp
-*.temp
-logcat*.txt
-test-output/
-playwright-report/
-allure-results/
-allure-report/
-coverage/
-*.profraw
-*.profdata
-
-# Local performance profiling artifacts
-Aries-site/lighthouse-*.report.html
-Aries-site/lighthouse-*.report.json
+/local.properties
+.DS_Store
+.idea/
+*.iml
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
