@@ -17,11 +17,12 @@ Flutter app
 
 - Clean Gradle workspace with `app-re0` as the first Android host for the cross-platform Flutter app.
 - Kotlin `core:capability-api` defines platform-neutral capability contracts; `platform:android:capability-runtime` is the first backend runtime.
-- Android platform plugin modules are present as clean-room backend modules.
+- Android platform plugin modules are present as clean-room backend modules and are kept split by capability.
 - Flutter UI shell is wired into the Android host through Flutter add-to-app.
 - Pigeon generated Dart/Kotlin files are present and `CapabilityHostApi` is registered in the Android host.
 - Diagnostics reads native capability health from `AndroidCapabilityRegistry`.
-- Permissions capability reports the first Android permission requirement catalog; the rest of the Android system capabilities are explicit `Unavailable` placeholders until their plugins are implemented.
+- Android Diagnostics now reads live health for permissions, Shizuku shell, accessibility, screen capture, UI tree, input injection, virtual display, floating window, background tasks, native runtime, speech recognition, and local model wrapper capabilities.
+- Chat, Automation, Settings, History, attachments, Markdown parity, and full real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 
 ## Verification

@@ -19,6 +19,8 @@ class CapabilityIdsTest {
         assertTrue(CapabilityIds.FloatingWindow in ids)
         assertTrue(CapabilityIds.BackgroundTasks in ids)
         assertTrue(CapabilityIds.NativeRuntime in ids)
+        assertTrue(CapabilityIds.SpeechRecognition in ids)
+        assertTrue(CapabilityIds.LocalModel in ids)
         assertEquals(ids.size, ids.toSet().size)
     }
 }

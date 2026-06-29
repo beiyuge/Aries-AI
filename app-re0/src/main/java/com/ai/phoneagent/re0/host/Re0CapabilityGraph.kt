@@ -8,7 +8,9 @@ import com.ai.phoneagent.platform.android.accessibility.AndroidUiTreeCapability
 import com.ai.phoneagent.platform.android.background.AndroidBackgroundTasksCapability
 import com.ai.phoneagent.platform.android.floating.AndroidFloatingWindowCapability
 import com.ai.phoneagent.platform.android.input.AndroidInputInjectionCapability
+import com.ai.phoneagent.platform.android.nativeruntime.AndroidLocalModelCapability
 import com.ai.phoneagent.platform.android.nativeruntime.AndroidNativeRuntimeCapability
+import com.ai.phoneagent.platform.android.nativeruntime.AndroidSpeechRecognitionCapability
 import com.ai.phoneagent.platform.android.permissions.AndroidPermissionsCapability
 import com.ai.phoneagent.platform.android.screen.AndroidScreenCaptureCapability
 import com.ai.phoneagent.platform.android.shizuku.AndroidShizukuShellCapability
@@ -29,6 +31,8 @@ object Re0CapabilityGraph {
                 AndroidFloatingWindowCapability(context.applicationContext),
                 AndroidBackgroundTasksCapability(context.applicationContext),
                 AndroidNativeRuntimeCapability(),
+                AndroidSpeechRecognitionCapability(context.applicationContext),
+                AndroidLocalModelCapability(),
             ),
         )
     }

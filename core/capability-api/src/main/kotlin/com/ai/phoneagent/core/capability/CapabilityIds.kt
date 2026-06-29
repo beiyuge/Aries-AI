@@ -11,6 +11,8 @@ object CapabilityIds {
     val FloatingWindow = CapabilityId("floating.window")
     val BackgroundTasks = CapabilityId("background.tasks")
     val NativeRuntime = CapabilityId("native.runtime")
+    val SpeechRecognition = CapabilityId("speech.recognition")
+    val LocalModel = CapabilityId("local.model")
 
     val allSystemIds: List<CapabilityId> = listOf(
         Permissions,
@@ -23,5 +25,7 @@ object CapabilityIds {
         FloatingWindow,
         BackgroundTasks,
         NativeRuntime,
+        SpeechRecognition,
+        LocalModel,
     )
 }
