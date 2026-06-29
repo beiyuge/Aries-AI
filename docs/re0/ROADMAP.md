@@ -1,13 +1,13 @@
 # re0 Roadmap
 
-## Milestone A: Clean shell
+## Milestone A: Cross-platform shell
 
 - Gradle clean-room workspace.
-- `app-re0` builds.
-- Capability API/runtime TDD tests pass.
-- Flutter shell files exist.
+- `app-re0` builds as the first Android host.
+- Platform-neutral Capability API TDD tests pass.
+- Flutter cross-platform app shell exists.
 
-## Milestone B: Typed bridge
+## Milestone B: Android typed bridge
 
 - Pigeon code generation installed.
 - `CapabilityHostApi` bridged to `AndroidCapabilityRegistry`.
@@ -34,3 +34,10 @@
 - chat UI parity
 - settings/provider parity
 - history/attachments/Markdown parity
+
+## Milestone F: Additional platform backends
+
+- Identify desktop/mobile automation surfaces outside Android.
+- Add backend modules under `platform/<name>/*`.
+- Keep Flutter UI and domain logic shared.
+- Keep platform-specific permission/settings/debug flows behind capability contracts.

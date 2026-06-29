@@ -1,25 +1,28 @@
 # Aries AI re0
 
-`re0` is a clean-room rewrite branch for Aries AI.
+`re0` is a clean-room rewrite branch for Aries AI as a cross-platform automation app.
 
-The old Android implementation has been removed from this branch and may only be used as reference from Git history or another branch. New code must enter through the re0 architecture:
+The old Android implementation has been removed from this branch and may only be used as reference from Git history or another branch. New product code must enter through the re0 architecture:
 
 ```text
-Flutter UI
+Flutter app
   -> Pigeon typed bridge
   -> Kotlin Capability API
-  -> Android Capability Plugins
+  -> Platform Capability Backends
+       -> Android backend first
+       -> desktop/mobile backends later
 ```
 
 ## Current status
 
-- Clean Gradle workspace with `app-re0` host app.
-- Kotlin `core:capability-api` and `platform:android:capability-runtime` implemented with TDD tests.
-- Android platform plugin modules are present as empty clean-room modules.
-- Flutter UI shell is wired into `app-re0` through Flutter add-to-app.
+- Clean Gradle workspace with `app-re0` as the first Android host for the cross-platform Flutter app.
+- Kotlin `core:capability-api` defines platform-neutral capability contracts; `platform:android:capability-runtime` is the first backend runtime.
+- Android platform plugin modules are present as clean-room backend modules.
+- Flutter UI shell is wired into the Android host through Flutter add-to-app.
 - Pigeon generated Dart/Kotlin files are present and `CapabilityHostApi` is registered in the Android host.
 - Diagnostics reads native capability health from `AndroidCapabilityRegistry`.
-- Permissions capability reports the first permission requirement catalog; the rest of the system capabilities are explicit `Unavailable` placeholders until their plugins are implemented.
+- Permissions capability reports the first Android permission requirement catalog; the rest of the Android system capabilities are explicit `Unavailable` placeholders until their plugins are implemented.
+- Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 
 ## Verification
 
