@@ -22,7 +22,8 @@ Flutter app
 - Pigeon generated Dart/Kotlin files are present and `CapabilityHostApi` is registered in the Android host.
 - Diagnostics reads native capability health from `AndroidCapabilityRegistry`.
 - Android Diagnostics now reads live health for permissions, Shizuku shell, accessibility, screen capture, UI tree, input injection, virtual display, floating window, background tasks, native runtime, speech recognition, and local model wrapper capabilities.
-- Chat, Automation, Settings, History, attachments, Markdown parity, and full real-device validation are still in progress.
+- Flutter Chat, Automation, and Settings screens now have usable shared UI surfaces with split feature controllers, models, and widgets.
+- Deeper chat streaming, durable history, real attachment import, richer Markdown, provider persistence, and full real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 
 ## Verification

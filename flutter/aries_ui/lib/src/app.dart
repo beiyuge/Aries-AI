@@ -13,7 +13,13 @@ class AriesRe0App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Aries AI re0',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF6750A4)),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: const Color(0xFF006A60),
+        cardTheme: CardThemeData(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
       routerConfig: _router,
     );
   }
@@ -26,9 +32,15 @@ final _router = GoRouter(
       builder: (context, state, child) => AriesScaffold(child: child),
       routes: [
         GoRoute(path: '/', builder: (context, state) => const ChatScreen()),
-        GoRoute(path: '/automation', builder: (context, state) => const AutomationScreen()),
-        GoRoute(path: '/diagnostics', builder: (context, state) => const DiagnosticsScreen()),
-        GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+        GoRoute(
+            path: '/automation',
+            builder: (context, state) => const AutomationScreen()),
+        GoRoute(
+            path: '/diagnostics',
+            builder: (context, state) => const DiagnosticsScreen()),
+        GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen()),
       ],
     ),
   ],
@@ -62,10 +74,14 @@ class AriesScaffold extends StatelessWidget {
           context.go(route);
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.smart_toy_outlined), label: 'Automation'),
-          NavigationDestination(icon: Icon(Icons.monitor_heart_outlined), label: 'Diagnostics'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+          NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
+          NavigationDestination(
+              icon: Icon(Icons.smart_toy_outlined), label: 'Automation'),
+          NavigationDestination(
+              icon: Icon(Icons.monitor_heart_outlined), label: 'Diagnostics'),
+          NavigationDestination(
+              icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),
     );
