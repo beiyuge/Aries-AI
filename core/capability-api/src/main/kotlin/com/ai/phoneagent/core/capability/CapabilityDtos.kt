@@ -123,6 +123,29 @@ data class FloatingWindowRequest(
 
 data class FloatingWindowSession(val sessionId: String, val mode: String)
 
+data class BackgroundTaskRequest(
+    val taskId: String,
+    val kind: String,
+    val payload: Map<String, String> = emptyMap(),
+)
+
+data class BackgroundTaskStatus(
+    val taskId: String,
+    val kind: String,
+    val state: BackgroundTaskState,
+    val diagnostics: Map<String, String> = emptyMap(),
+)
+
+enum class BackgroundTaskState { Enqueued, Running, Succeeded, Failed, Cancelled, Unknown }
+
+data class NativeRuntimeInfo(
+    val platform: String,
+    val osVersion: String,
+    val sdkInt: Int?,
+    val supportedAbis: List<String>,
+    val diagnostics: Map<String, String> = emptyMap(),
+)
+
 data class SpeechRecognitionRequest(val locale: String? = null)
 
 sealed interface SpeechRecognitionEvent {

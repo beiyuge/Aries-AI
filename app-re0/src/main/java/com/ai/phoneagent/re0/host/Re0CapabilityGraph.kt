@@ -27,7 +27,7 @@ object Re0CapabilityGraph {
                 AndroidInputInjectionCapability(accessibilityStatus),
                 AndroidVirtualDisplayCapability(),
                 AndroidFloatingWindowCapability(context.applicationContext),
-                AndroidBackgroundTasksCapability(),
+                AndroidBackgroundTasksCapability(context.applicationContext),
                 AndroidNativeRuntimeCapability(),
             ),
         )

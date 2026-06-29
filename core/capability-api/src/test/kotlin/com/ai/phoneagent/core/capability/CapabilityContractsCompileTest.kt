@@ -30,6 +30,8 @@ class CapabilityContractsCompileTest {
         val inputInjection: InputInjectionCapability,
         val virtualDisplay: VirtualDisplayCapability,
         val floatingWindow: FloatingWindowCapability,
+        val backgroundTasks: BackgroundTasksCapability,
+        val nativeRuntime: NativeRuntimeCapability,
         val speechRecognition: SpeechRecognitionCapability,
         val localModel: LocalModelCapability,
     )

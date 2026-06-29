@@ -42,6 +42,16 @@ interface FloatingWindowCapability : Capability {
     suspend fun hide(sessionId: String): CapabilityResult<Unit>
 }
 
+interface BackgroundTasksCapability : Capability {
+    suspend fun enqueue(request: BackgroundTaskRequest): CapabilityResult<BackgroundTaskStatus>
+    suspend fun status(taskId: String): CapabilityResult<BackgroundTaskStatus>
+    suspend fun cancel(taskId: String): CapabilityResult<Unit>
+}
+
+interface NativeRuntimeCapability : Capability {
+    suspend fun inspect(): CapabilityResult<NativeRuntimeInfo>
+}
+
 interface SpeechRecognitionCapability : Capability {
     fun recognize(request: SpeechRecognitionRequest): Flow<SpeechRecognitionEvent>
 }
