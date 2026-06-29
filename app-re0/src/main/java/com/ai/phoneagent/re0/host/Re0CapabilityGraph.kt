@@ -26,7 +26,7 @@ object Re0CapabilityGraph {
                 AndroidUiTreeCapability(accessibilityStatus),
                 AndroidInputInjectionCapability(accessibilityStatus),
                 AndroidVirtualDisplayCapability(),
-                AndroidFloatingWindowCapability(),
+                AndroidFloatingWindowCapability(context.applicationContext),
                 AndroidBackgroundTasksCapability(),
                 AndroidNativeRuntimeCapability(),
             ),

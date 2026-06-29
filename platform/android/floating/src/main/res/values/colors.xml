@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="re0_floating_background">#EE202124</color>
+    <color name="re0_floating_title">#FFFFFFFF</color>
+    <color name="re0_floating_body">#FFE8EAED</color>
+</resources>
