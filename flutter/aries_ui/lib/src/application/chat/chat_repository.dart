@@ -7,8 +7,8 @@ class ChatState {
     required this.selectedModelId,
     required List<ChatAttachment> pendingAttachments,
     required this.nextId,
-  }) : sessions = List.unmodifiable(sessions),
-       pendingAttachments = List.unmodifiable(pendingAttachments);
+  })  : sessions = List.unmodifiable(sessions),
+        pendingAttachments = List.unmodifiable(pendingAttachments);
 
   final List<ChatSession> sessions;
   final String activeSessionId;
@@ -39,12 +39,12 @@ class ChatState {
 abstract interface class ChatRepository {
   ChatState load();
 
-  void save(ChatState state);
+  Future<void> save(ChatState state);
 }
 
 class InMemoryChatRepository implements ChatRepository {
   InMemoryChatRepository({DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+      : _clock = clock ?? DateTime.now;
 
   final DateTime Function() _clock;
   ChatState? _state;
@@ -53,7 +53,7 @@ class InMemoryChatRepository implements ChatRepository {
   ChatState load() => _state ??= _seedState();
 
   @override
-  void save(ChatState state) {
+  Future<void> save(ChatState state) async {
     _state = state;
   }
 
@@ -74,8 +74,7 @@ class InMemoryChatRepository implements ChatRepository {
         ChatMessage(
           id: 'message-seed-assistant',
           role: ChatMessageRole.assistant,
-          markdown:
-              '- Diagnostics reads native health\n'
+          markdown: '- Diagnostics reads native health\n'
               '- Automation can target Android backends\n'
               '- Local wrappers are available for parity work',
           createdAt: now,

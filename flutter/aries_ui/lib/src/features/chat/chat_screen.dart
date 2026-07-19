@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../application/chat/chat_repository.dart';
 import 'controllers/chat_controller.dart';
 import 'widgets/attachment_strip.dart';
 import 'widgets/chat_composer.dart';
@@ -8,7 +9,9 @@ import 'widgets/chat_message_bubble.dart';
 import 'widgets/chat_toolbar.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({required this.repository, super.key});
+
+  final ChatRepository repository;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -21,7 +24,16 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = ChatController();
+    _controller = ChatController(repository: widget.repository);
+  }
+
+  @override
+  void didUpdateWidget(ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.repository, oldWidget.repository)) {
+      _controller.dispose();
+      _controller = ChatController(repository: widget.repository);
+    }
   }
 
   @override
@@ -84,12 +96,12 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _composerController.text.trim();
     if (text.isEmpty && _controller.pendingAttachments.isEmpty) {
       return;
     }
-    _controller.send(text);
+    await _controller.send(text);
     _composerController.clear();
   }
 }

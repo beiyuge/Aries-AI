@@ -11,6 +11,10 @@ Android is the first platform backend because it contains the current automation
 ```text
 flutter/aries_ui
     Cross-platform UI, navigation, settings, chat, diagnostics
+flutter/aries_ui/lib/src/application
+    Shared application state and repository interfaces
+flutter/aries_ui/lib/src/infrastructure
+    Cross-platform repository adapters, codecs, and local persistence
 pigeons/capabilities.dart
     Typed Flutter <-> host API surface
 app-re0
@@ -43,6 +47,12 @@ platform/<future>/*
 | `platform/android/background` | WorkManager and durable background tasks |
 | `platform/android/native-runtime` | Local model, speech, native diagnostics |
 
+## Flutter host integration
+
+`flutter/aries_ui` is a Flutter module. `flutter pub get` generates its ignored `.android` metadata, the root `settings.gradle` loads the generated `include_flutter.groovy`, and `app-re0` depends on `project(':flutter')`. This keeps plugin discovery and `GeneratedPluginRegistrant` on Flutter's standard add-to-app path.
+
+The Android federated implementation of `shared_preferences` is pinned to `2.4.21` until the Kotlin DSL extension accessor introduced in `2.4.22` works in this add-to-app build. The shared Dart interface remains on `shared_preferences 2.5.x`.
+
 ## Rules
 
 1. Flutter does not call platform system APIs directly.
@@ -52,3 +62,5 @@ platform/<future>/*
 5. Every capability exposes `CapabilityHealth`.
 6. Every real plugin must have a fake and tests before full implementation.
 7. No new code may import old `app/` classes; the old `app/` tree is absent in this branch.
+8. Shared application state is injected at the app composition root; feature screens must not create private persistence adapters.
+9. Persisted state uses explicit schema versions and must recover safely when data is malformed or from an unsupported future schema.

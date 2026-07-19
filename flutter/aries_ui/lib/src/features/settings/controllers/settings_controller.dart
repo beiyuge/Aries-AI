@@ -5,7 +5,7 @@ import '../models/settings_models.dart';
 
 class SettingsController extends ChangeNotifier {
   SettingsController({SettingsRepository? repository})
-    : _repository = repository ?? InMemorySettingsRepository() {
+      : _repository = repository ?? InMemorySettingsRepository() {
     _state = _repository.load();
   }
 
@@ -17,21 +17,21 @@ class SettingsController extends ChangeNotifier {
   bool get preferLocalModel => _state.preferLocalModel;
   List<ProviderProfile> get profiles => _state.profiles;
 
-  void selectProfile(String profileId) {
-    _save(_state.copyWith(selectedProfileId: profileId));
+  Future<void> selectProfile(String profileId) {
+    return _save(_state.copyWith(selectedProfileId: profileId));
   }
 
-  void setStreamResponses(bool value) {
-    _save(_state.copyWith(streamResponses: value));
+  Future<void> setStreamResponses(bool value) {
+    return _save(_state.copyWith(streamResponses: value));
   }
 
-  void setPreferLocalModel(bool value) {
-    _save(_state.copyWith(preferLocalModel: value));
+  Future<void> setPreferLocalModel(bool value) {
+    return _save(_state.copyWith(preferLocalModel: value));
   }
 
-  void _save(SettingsState state) {
+  Future<void> _save(SettingsState state) async {
     _state = state;
-    _repository.save(state);
     notifyListeners();
+    await _repository.save(state);
   }
 }

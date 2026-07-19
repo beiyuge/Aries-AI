@@ -46,3 +46,9 @@ include ':platform:android:floating'
 include ':platform:android:background'
 include ':platform:android:native-runtime'
 include ':app-re0'
+
+def flutterModuleInclude = file('flutter/aries_ui/.android/include_flutter.groovy')
+if (!flutterModuleInclude.exists()) {
+    throw new GradleException('Flutter module metadata is missing. Run flutter pub get in flutter/aries_ui.')
+}
+apply from: flutterModuleInclude

@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id 'dev.flutter.flutter-gradle-plugin'
 }
 
 android {
@@ -27,11 +26,8 @@ android {
     }
 }
 
-flutter {
-    source '../flutter/aries_ui'
-}
-
 dependencies {
+    implementation project(':flutter')
     implementation project(':core:capability-api')
     implementation project(':platform:android:capability-runtime')
     implementation project(':platform:android:permissions')

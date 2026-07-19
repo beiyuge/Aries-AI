@@ -7,8 +7,8 @@ class AutomationController extends ChangeNotifier {
   AutomationController({
     AutomationRepository? repository,
     AutomationPlanner? planner,
-  }) : _repository = repository ?? InMemoryAutomationRepository(),
-       _planner = planner ?? const AutomationPlanner() {
+  })  : _repository = repository ?? InMemoryAutomationRepository(),
+        _planner = planner ?? const AutomationPlanner() {
     _state = _repository.load();
   }
 
@@ -20,9 +20,9 @@ class AutomationController extends ChangeNotifier {
 
   List<AutomationCapabilitySummary> get capabilities => _state.capabilities;
 
-  void enqueue(String title) {
+  Future<void> enqueue(String title) {
     final nextId = _state.nextId + 1;
-    _save(
+    return _save(
       _state.copyWith(
         nextId: nextId,
         tasks: [
@@ -38,8 +38,8 @@ class AutomationController extends ChangeNotifier {
     );
   }
 
-  void run(String taskId) {
-    _update(taskId, (task) {
+  Future<void> run(String taskId) {
+    return _update(taskId, (task) {
       return task.copyWith(
         status: AutomationTaskStatus.completed,
         steps: [...task.steps, 'Result captured'],
@@ -47,18 +47,18 @@ class AutomationController extends ChangeNotifier {
     });
   }
 
-  void cancel(String taskId) {
-    _update(
+  Future<void> cancel(String taskId) {
+    return _update(
       taskId,
       (task) => task.copyWith(status: AutomationTaskStatus.cancelled),
     );
   }
 
-  void _update(
+  Future<void> _update(
     String taskId,
     AutomationTask Function(AutomationTask task) update,
   ) {
-    _save(
+    return _save(
       _state.copyWith(
         tasks: [
           for (final task in _state.tasks)
@@ -68,9 +68,9 @@ class AutomationController extends ChangeNotifier {
     );
   }
 
-  void _save(AutomationState state) {
+  Future<void> _save(AutomationState state) async {
     _state = state;
-    _repository.save(state);
     notifyListeners();
+    await _repository.save(state);
   }
 }

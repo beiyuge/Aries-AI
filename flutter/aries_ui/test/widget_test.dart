@@ -40,5 +40,12 @@ void main() {
     await tester.pump();
 
     expect(find.text('native runtime'), findsOneWidget);
+
+    await tester.tap(find.text('Chat').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('native runtime'), findsOneWidget);
   });
 }

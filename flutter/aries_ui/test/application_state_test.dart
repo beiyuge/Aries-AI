@@ -10,14 +10,15 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   DateTime clock() => DateTime(2026, 6, 29, 12);
 
-  test('chat state survives controller recreation through its repository', () {
+  test('chat state survives controller recreation through its repository',
+      () async {
     final repository = InMemoryChatRepository(clock: clock);
     final controller = ChatController(repository: repository, clock: clock);
 
-    controller.startNewSession();
-    controller.selectModel('automation.copilot');
-    controller.addSampleAttachment();
-    controller.send('Inspect the active screen');
+    await controller.startNewSession();
+    await controller.selectModel('automation.copilot');
+    await controller.addSampleAttachment();
+    await controller.send('Inspect the active screen');
 
     final restored = ChatController(repository: repository, clock: clock);
     expect(restored.selectedModelId, 'automation.copilot');
@@ -32,13 +33,13 @@ void main() {
 
   test(
     'settings state survives controller recreation through its repository',
-    () {
+    () async {
       final repository = InMemorySettingsRepository();
       final controller = SettingsController(repository: repository);
 
-      controller.selectProfile('local');
-      controller.setStreamResponses(false);
-      controller.setPreferLocalModel(true);
+      await controller.selectProfile('local');
+      await controller.setStreamResponses(false);
+      await controller.setPreferLocalModel(true);
 
       final restored = SettingsController(repository: repository);
       expect(restored.selectedProfileId, 'local');
@@ -49,12 +50,12 @@ void main() {
 
   test(
     'automation state survives controller recreation through its repository',
-    () {
+    () async {
       final repository = InMemoryAutomationRepository();
       final controller = AutomationController(repository: repository);
 
-      controller.enqueue('capture screen');
-      controller.run(controller.tasks.first.id);
+      await controller.enqueue('capture screen');
+      await controller.run(controller.tasks.first.id);
 
       final restored = AutomationController(repository: repository);
       expect(restored.tasks.first.title, 'capture screen');

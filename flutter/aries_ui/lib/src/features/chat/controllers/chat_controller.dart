@@ -8,9 +8,9 @@ class ChatController extends ChangeNotifier {
     ChatRepository? repository,
     ChatDraftResponder? draftResponder,
     DateTime Function()? clock,
-  }) : _repository = repository ?? InMemoryChatRepository(clock: clock),
-       _draftResponder = draftResponder ?? const ChatDraftResponder(),
-       _clock = clock ?? DateTime.now {
+  })  : _repository = repository ?? InMemoryChatRepository(clock: clock),
+        _draftResponder = draftResponder ?? const ChatDraftResponder(),
+        _clock = clock ?? DateTime.now {
     _state = _repository.load();
   }
 
@@ -28,32 +28,32 @@ class ChatController extends ChangeNotifier {
   String get selectedModelId => _state.selectedModelId;
 
   List<ChatModelProfile> get availableModels => const [
-    ChatModelProfile(
-      id: 'local.wrapper',
-      label: 'Local wrapper',
-      caption: 'native.runtime / local.model',
-    ),
-    ChatModelProfile(
-      id: 'remote.primary',
-      label: 'Remote primary',
-      caption: 'provider profile',
-    ),
-    ChatModelProfile(
-      id: 'automation.copilot',
-      label: 'Automation copilot',
-      caption: 'capability aware',
-    ),
-  ];
+        ChatModelProfile(
+          id: 'local.wrapper',
+          label: 'Local wrapper',
+          caption: 'native.runtime / local.model',
+        ),
+        ChatModelProfile(
+          id: 'remote.primary',
+          label: 'Remote primary',
+          caption: 'provider profile',
+        ),
+        ChatModelProfile(
+          id: 'automation.copilot',
+          label: 'Automation copilot',
+          caption: 'capability aware',
+        ),
+      ];
 
-  void selectModel(String modelId) {
-    _save(_state.copyWith(selectedModelId: modelId));
+  Future<void> selectModel(String modelId) {
+    return _save(_state.copyWith(selectedModelId: modelId));
   }
 
-  void selectSession(String sessionId) {
-    _save(_state.copyWith(activeSessionId: sessionId));
+  Future<void> selectSession(String sessionId) {
+    return _save(_state.copyWith(activeSessionId: sessionId));
   }
 
-  void startNewSession() {
+  Future<void> startNewSession() {
     final now = _clock();
     final session = ChatSession(
       id: _id('session'),
@@ -68,7 +68,7 @@ class ChatController extends ChangeNotifier {
       ],
       updatedAt: now,
     );
-    _save(
+    return _save(
       _state.copyWith(
         sessions: [session, ..._state.sessions],
         activeSessionId: session.id,
@@ -76,8 +76,8 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  void addSampleAttachment() {
-    _save(
+  Future<void> addSampleAttachment() {
+    return _save(
       _state.copyWith(
         pendingAttachments: [
           ..._state.pendingAttachments,
@@ -92,8 +92,8 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  void removeAttachment(String attachmentId) {
-    _save(
+  Future<void> removeAttachment(String attachmentId) {
+    return _save(
       _state.copyWith(
         pendingAttachments: [
           for (final attachment in _state.pendingAttachments)
@@ -103,7 +103,7 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  void send(String text) {
+  Future<void> send(String text) {
     final now = _clock();
     final userText = text.isEmpty ? 'Attached context' : text;
     final userMessage = ChatMessage(
@@ -132,7 +132,7 @@ class ChatController extends ChangeNotifier {
         updatedAt: now,
       );
     });
-    _save(_state.copyWith(pendingAttachments: const []));
+    return _save(_state.copyWith(pendingAttachments: const []));
   }
 
   void _replaceActive(ChatSession Function(ChatSession session) update) {
@@ -147,10 +147,10 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  void _save(ChatState state) {
+  Future<void> _save(ChatState state) async {
     _state = state;
-    _repository.save(state);
     notifyListeners();
+    await _repository.save(state);
   }
 
   String _id(String prefix) {

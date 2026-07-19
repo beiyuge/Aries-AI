@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../application/settings/settings_repository.dart';
 import 'controllers/settings_controller.dart';
 import 'widgets/android_capability_section.dart';
 import 'widgets/provider_profile_card.dart';
 import 'widgets/runtime_section.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({required this.repository, super.key});
+
+  final SettingsRepository repository;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -18,7 +21,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = SettingsController();
+    _controller = SettingsController(repository: widget.repository);
+  }
+
+  @override
+  void didUpdateWidget(SettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.repository, oldWidget.repository)) {
+      _controller.dispose();
+      _controller = SettingsController(repository: widget.repository);
+    }
   }
 
   @override

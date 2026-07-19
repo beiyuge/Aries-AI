@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../application/automation/automation_repository.dart';
 import 'controllers/automation_controller.dart';
 import 'widgets/automation_task_card.dart';
 import 'widgets/capability_lane.dart';
 import 'widgets/task_composer.dart';
 
 class AutomationScreen extends StatefulWidget {
-  const AutomationScreen({super.key});
+  const AutomationScreen({required this.repository, super.key});
+
+  final AutomationRepository repository;
 
   @override
   State<AutomationScreen> createState() => _AutomationScreenState();
@@ -19,7 +22,16 @@ class _AutomationScreenState extends State<AutomationScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = AutomationController();
+    _controller = AutomationController(repository: widget.repository);
+  }
+
+  @override
+  void didUpdateWidget(AutomationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.repository, oldWidget.repository)) {
+      _controller.dispose();
+      _controller = AutomationController(repository: widget.repository);
+    }
   }
 
   @override

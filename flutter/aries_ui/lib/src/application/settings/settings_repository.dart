@@ -31,7 +31,7 @@ class SettingsState {
 abstract interface class SettingsRepository {
   SettingsState load();
 
-  void save(SettingsState state);
+  Future<void> save(SettingsState state);
 }
 
 class InMemorySettingsRepository implements SettingsRepository {
@@ -39,30 +39,30 @@ class InMemorySettingsRepository implements SettingsRepository {
 
   @override
   SettingsState load() => _state ??= SettingsState(
-    selectedProfileId: 'default',
-    streamResponses: true,
-    preferLocalModel: false,
-    profiles: const [
-      ProviderProfile(
-        id: 'default',
-        name: 'Default',
-        endpointLabel: 'System provider',
-      ),
-      ProviderProfile(
-        id: 'local',
-        name: 'Local',
-        endpointLabel: 'native runtime',
-      ),
-      ProviderProfile(
-        id: 'staging',
-        name: 'Staging',
-        endpointLabel: 'remote gateway',
-      ),
-    ],
-  );
+        selectedProfileId: 'default',
+        streamResponses: true,
+        preferLocalModel: false,
+        profiles: const [
+          ProviderProfile(
+            id: 'default',
+            name: 'Default',
+            endpointLabel: 'System provider',
+          ),
+          ProviderProfile(
+            id: 'local',
+            name: 'Local',
+            endpointLabel: 'native runtime',
+          ),
+          ProviderProfile(
+            id: 'staging',
+            name: 'Staging',
+            endpointLabel: 'remote gateway',
+          ),
+        ],
+      );
 
   @override
-  void save(SettingsState state) {
+  Future<void> save(SettingsState state) async {
     _state = state;
   }
 }

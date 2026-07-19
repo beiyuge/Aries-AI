@@ -10,11 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_riverpod: ^2.6.1
   go_router: ^14.8.1
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
   drift: ^2.24.0
+  shared_preferences: ^2.5.5
+  # 2.4.22+ uses a Kotlin DSL accessor that is not resolved by this add-to-app host.
+  shared_preferences_android: 2.4.21
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +29,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  module:
+    androidX: true
+    androidPackage: com.ai.phoneagent.re0.flutter
+    iosBundleIdentifier: com.ai.phoneagent.re0.flutter
