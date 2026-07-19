@@ -1,46 +1,37 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../application/settings/settings_repository.dart';
 import '../models/settings_models.dart';
 
 class SettingsController extends ChangeNotifier {
-  String _selectedProfileId = 'default';
-  bool _streamResponses = true;
-  bool _preferLocalModel = false;
+  SettingsController({SettingsRepository? repository})
+    : _repository = repository ?? InMemorySettingsRepository() {
+    _state = _repository.load();
+  }
 
-  String get selectedProfileId => _selectedProfileId;
-  bool get streamResponses => _streamResponses;
-  bool get preferLocalModel => _preferLocalModel;
+  final SettingsRepository _repository;
+  late SettingsState _state;
 
-  List<ProviderProfile> get profiles => const [
-        ProviderProfile(
-          id: 'default',
-          name: 'Default',
-          endpointLabel: 'System provider',
-        ),
-        ProviderProfile(
-          id: 'local',
-          name: 'Local',
-          endpointLabel: 'native runtime',
-        ),
-        ProviderProfile(
-          id: 'staging',
-          name: 'Staging',
-          endpointLabel: 'remote gateway',
-        ),
-      ];
+  String get selectedProfileId => _state.selectedProfileId;
+  bool get streamResponses => _state.streamResponses;
+  bool get preferLocalModel => _state.preferLocalModel;
+  List<ProviderProfile> get profiles => _state.profiles;
 
   void selectProfile(String profileId) {
-    _selectedProfileId = profileId;
-    notifyListeners();
+    _save(_state.copyWith(selectedProfileId: profileId));
   }
 
   void setStreamResponses(bool value) {
-    _streamResponses = value;
-    notifyListeners();
+    _save(_state.copyWith(streamResponses: value));
   }
 
   void setPreferLocalModel(bool value) {
-    _preferLocalModel = value;
+    _save(_state.copyWith(preferLocalModel: value));
+  }
+
+  void _save(SettingsState state) {
+    _state = state;
+    _repository.save(state);
     notifyListeners();
   }
 }

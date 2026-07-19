@@ -1,59 +1,60 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../application/chat/chat_repository.dart';
 import '../models/chat_models.dart';
 
 class ChatController extends ChangeNotifier {
-  ChatController() {
-    _sessions = [_seedSession()];
-    _activeSessionId = _sessions.first.id;
+  ChatController({
+    ChatRepository? repository,
+    ChatDraftResponder? draftResponder,
+    DateTime Function()? clock,
+  }) : _repository = repository ?? InMemoryChatRepository(clock: clock),
+       _draftResponder = draftResponder ?? const ChatDraftResponder(),
+       _clock = clock ?? DateTime.now {
+    _state = _repository.load();
   }
 
-  late List<ChatSession> _sessions;
-  late String _activeSessionId;
-  String _selectedModelId = 'local.wrapper';
-  final List<ChatAttachment> _pendingAttachments = [];
-  int _nextId = 0;
+  final ChatRepository _repository;
+  final ChatDraftResponder _draftResponder;
+  final DateTime Function() _clock;
+  late ChatState _state;
 
-  List<ChatSession> get sessions => List.unmodifiable(_sessions);
+  List<ChatSession> get sessions => _state.sessions;
 
-  ChatSession get activeSession =>
-      _sessions.firstWhere((session) => session.id == _activeSessionId);
+  ChatSession get activeSession => _state.activeSession;
 
-  List<ChatAttachment> get pendingAttachments =>
-      List.unmodifiable(_pendingAttachments);
+  List<ChatAttachment> get pendingAttachments => _state.pendingAttachments;
 
-  String get selectedModelId => _selectedModelId;
+  String get selectedModelId => _state.selectedModelId;
 
   List<ChatModelProfile> get availableModels => const [
-        ChatModelProfile(
-          id: 'local.wrapper',
-          label: 'Local wrapper',
-          caption: 'native.runtime / local.model',
-        ),
-        ChatModelProfile(
-          id: 'remote.primary',
-          label: 'Remote primary',
-          caption: 'provider profile',
-        ),
-        ChatModelProfile(
-          id: 'automation.copilot',
-          label: 'Automation copilot',
-          caption: 'capability aware',
-        ),
-      ];
+    ChatModelProfile(
+      id: 'local.wrapper',
+      label: 'Local wrapper',
+      caption: 'native.runtime / local.model',
+    ),
+    ChatModelProfile(
+      id: 'remote.primary',
+      label: 'Remote primary',
+      caption: 'provider profile',
+    ),
+    ChatModelProfile(
+      id: 'automation.copilot',
+      label: 'Automation copilot',
+      caption: 'capability aware',
+    ),
+  ];
 
   void selectModel(String modelId) {
-    _selectedModelId = modelId;
-    notifyListeners();
+    _save(_state.copyWith(selectedModelId: modelId));
   }
 
   void selectSession(String sessionId) {
-    _activeSessionId = sessionId;
-    notifyListeners();
+    _save(_state.copyWith(activeSessionId: sessionId));
   }
 
   void startNewSession() {
-    final now = DateTime.now();
+    final now = _clock();
     final session = ChatSession(
       id: _id('session'),
       title: 'New session',
@@ -67,109 +68,94 @@ class ChatController extends ChangeNotifier {
       ],
       updatedAt: now,
     );
-    _sessions = [session, ..._sessions];
-    _activeSessionId = session.id;
-    notifyListeners();
+    _save(
+      _state.copyWith(
+        sessions: [session, ..._state.sessions],
+        activeSessionId: session.id,
+      ),
+    );
   }
 
   void addSampleAttachment() {
-    _pendingAttachments.add(
-      ChatAttachment(
-        id: _id('attachment'),
-        name: 'screen-context.json',
-        mimeType: 'application/json',
-        sizeLabel: '8 KB',
+    _save(
+      _state.copyWith(
+        pendingAttachments: [
+          ..._state.pendingAttachments,
+          ChatAttachment(
+            id: _id('attachment'),
+            name: 'screen-context.json',
+            mimeType: 'application/json',
+            sizeLabel: '8 KB',
+          ),
+        ],
       ),
     );
-    notifyListeners();
   }
 
   void removeAttachment(String attachmentId) {
-    _pendingAttachments
-        .removeWhere((attachment) => attachment.id == attachmentId);
-    notifyListeners();
+    _save(
+      _state.copyWith(
+        pendingAttachments: [
+          for (final attachment in _state.pendingAttachments)
+            if (attachment.id != attachmentId) attachment,
+        ],
+      ),
+    );
   }
 
   void send(String text) {
-    final now = DateTime.now();
+    final now = _clock();
     final userText = text.isEmpty ? 'Attached context' : text;
     final userMessage = ChatMessage(
       id: _id('message'),
       role: ChatMessageRole.user,
       markdown: userText,
-      attachments: List.unmodifiable(_pendingAttachments),
+      attachments: _state.pendingAttachments,
       createdAt: now,
     );
     final assistantMessage = ChatMessage(
       id: _id('message'),
       role: ChatMessageRole.assistant,
-      markdown: _draftAssistantReply(userText),
+      markdown: _draftResponder.reply(
+        modelId: _state.selectedModelId,
+        prompt: userText,
+      ),
       createdAt: now.add(const Duration(milliseconds: 400)),
     );
-    _pendingAttachments.clear();
     _replaceActive((session) {
-      final title =
-          session.title == 'New session' ? _titleFrom(userText) : session.title;
+      final title = session.title == 'New session'
+          ? _draftResponder.titleFrom(userText)
+          : session.title;
       return session.copyWith(
         title: title,
         messages: [...session.messages, userMessage, assistantMessage],
-        updatedAt: DateTime.now(),
+        updatedAt: now,
       );
     });
-    notifyListeners();
+    _save(_state.copyWith(pendingAttachments: const []));
   }
 
   void _replaceActive(ChatSession Function(ChatSession session) update) {
-    _sessions = [
-      for (final session in _sessions)
-        if (session.id == _activeSessionId) update(session) else session,
-    ];
-  }
-
-  ChatSession _seedSession() {
-    final now = DateTime.now();
-    return ChatSession(
-      id: 'session-seed',
-      title: 'Device readiness',
-      updatedAt: now,
-      messages: [
-        ChatMessage(
-          id: 'message-seed-system',
-          role: ChatMessageRole.system,
-          markdown:
-              '# Aries\nCapabilities are connected through the typed bridge.',
-          createdAt: now,
-        ),
-        ChatMessage(
-          id: 'message-seed-assistant',
-          role: ChatMessageRole.assistant,
-          markdown:
-              '- Diagnostics reads native health\n- Automation can target Android backends\n- Local wrappers are available for parity work',
-          createdAt: now,
-        ),
+    _state = _state.copyWith(
+      sessions: [
+        for (final session in _state.sessions)
+          if (session.id == _state.activeSessionId)
+            update(session)
+          else
+            session,
       ],
     );
   }
 
-  String _draftAssistantReply(String prompt) {
-    return '# Draft\n'
-        '- Model: $_selectedModelId\n'
-        '- Intent: ${_titleFrom(prompt)}\n'
-        '- Next: inspect Diagnostics before device actions';
-  }
-
-  String _titleFrom(String text) {
-    final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (normalized.isEmpty) {
-      return 'Attached context';
-    }
-    return normalized.length <= 28
-        ? normalized
-        : '${normalized.substring(0, 28)}...';
+  void _save(ChatState state) {
+    _state = state;
+    _repository.save(state);
+    notifyListeners();
   }
 
   String _id(String prefix) {
-    _nextId += 1;
-    return '$prefix-$_nextId';
+    final nextId = _state.nextId + 1;
+    _state = _state.copyWith(nextId: nextId);
+    return '$prefix-$nextId';
   }
 }

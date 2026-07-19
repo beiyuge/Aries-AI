@@ -23,6 +23,7 @@ Flutter app
 - Diagnostics reads native capability health from `AndroidCapabilityRegistry`.
 - Android Diagnostics now reads live health for permissions, Shizuku shell, accessibility, screen capture, UI tree, input injection, virtual display, floating window, background tasks, native runtime, speech recognition, and local model wrapper capabilities.
 - Flutter Chat, Automation, and Settings screens now have usable shared UI surfaces with split feature controllers, models, and widgets.
+- Chat, Automation, and Settings state now flows through shared Flutter application repositories, preparing the app for durable history, provider persistence, and real model and automation adapters.
 - Deeper chat streaming, durable history, real attachment import, richer Markdown, provider persistence, and full real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 

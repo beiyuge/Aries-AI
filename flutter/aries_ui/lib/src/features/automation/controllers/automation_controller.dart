@@ -1,43 +1,41 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../application/automation/automation_repository.dart';
 import '../models/automation_models.dart';
 
 class AutomationController extends ChangeNotifier {
-  List<AutomationTask> _tasks = const [
-    AutomationTask(
-      id: 'task-readiness',
-      title: 'Check device readiness',
-      status: AutomationTaskStatus.queued,
-      steps: ['Diagnostics', 'Permissions', 'Backend health'],
-    ),
-  ];
-  int _nextId = 0;
+  AutomationController({
+    AutomationRepository? repository,
+    AutomationPlanner? planner,
+  }) : _repository = repository ?? InMemoryAutomationRepository(),
+       _planner = planner ?? const AutomationPlanner() {
+    _state = _repository.load();
+  }
 
-  List<AutomationTask> get tasks => List.unmodifiable(_tasks);
+  final AutomationRepository _repository;
+  final AutomationPlanner _planner;
+  late AutomationState _state;
 
-  List<AutomationCapabilitySummary> get capabilities => const [
-        AutomationCapabilitySummary(
-            id: 'ui.tree', label: 'UI tree', available: true),
-        AutomationCapabilitySummary(
-            id: 'input.injection', label: 'Input', available: true),
-        AutomationCapabilitySummary(
-            id: 'screen.capture', label: 'Screen', available: true),
-        AutomationCapabilitySummary(
-            id: 'virtual.display', label: 'Virtual display', available: true),
-      ];
+  List<AutomationTask> get tasks => _state.tasks;
+
+  List<AutomationCapabilitySummary> get capabilities => _state.capabilities;
 
   void enqueue(String title) {
-    _nextId += 1;
-    _tasks = [
-      AutomationTask(
-        id: 'task-$_nextId',
-        title: title,
-        status: AutomationTaskStatus.queued,
-        steps: _stepsFor(title),
+    final nextId = _state.nextId + 1;
+    _save(
+      _state.copyWith(
+        nextId: nextId,
+        tasks: [
+          AutomationTask(
+            id: 'task-$nextId',
+            title: title,
+            status: AutomationTaskStatus.queued,
+            steps: _planner.stepsFor(title),
+          ),
+          ..._state.tasks,
+        ],
       ),
-      ..._tasks,
-    ];
-    notifyListeners();
+    );
   }
 
   void run(String taskId) {
@@ -50,27 +48,29 @@ class AutomationController extends ChangeNotifier {
   }
 
   void cancel(String taskId) {
-    _update(taskId,
-        (task) => task.copyWith(status: AutomationTaskStatus.cancelled));
+    _update(
+      taskId,
+      (task) => task.copyWith(status: AutomationTaskStatus.cancelled),
+    );
   }
 
   void _update(
-      String taskId, AutomationTask Function(AutomationTask task) update) {
-    _tasks = [
-      for (final task in _tasks)
-        if (task.id == taskId) update(task) else task,
-    ];
-    notifyListeners();
+    String taskId,
+    AutomationTask Function(AutomationTask task) update,
+  ) {
+    _save(
+      _state.copyWith(
+        tasks: [
+          for (final task in _state.tasks)
+            if (task.id == taskId) update(task) else task,
+        ],
+      ),
+    );
   }
 
-  List<String> _stepsFor(String title) {
-    final lower = title.toLowerCase();
-    if (lower.contains('type') || lower.contains('input')) {
-      return ['Dump UI tree', 'Find input target', 'Inject text'];
-    }
-    if (lower.contains('screen') || lower.contains('capture')) {
-      return ['Capture screen', 'Attach frame', 'Summarize state'];
-    }
-    return ['Plan', 'Check capabilities', 'Execute'];
+  void _save(AutomationState state) {
+    _state = state;
+    _repository.save(state);
+    notifyListeners();
   }
 }
