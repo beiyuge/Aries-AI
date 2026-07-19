@@ -6,6 +6,7 @@ import 'application/application_repository_scope.dart';
 import 'application/chat/chat_attachment_picker.dart';
 import 'application/chat/chat_runtime.dart';
 import 'application/chat/local_model_gateway.dart';
+import 'application/automation/automation_runtime.dart';
 import 'application/settings/local_model_file_picker.dart';
 import 'features/automation/automation_screen.dart';
 import 'features/chat/chat_screen.dart';
@@ -15,6 +16,8 @@ import 'infrastructure/chat/file_selector_chat_attachment_picker.dart';
 import 'infrastructure/chat/default_chat_runtime.dart';
 import 'infrastructure/chat/local_model_chat_runtime.dart';
 import 'infrastructure/chat/pigeon_local_model_gateway.dart';
+import 'infrastructure/automation/default_automation_runtime.dart';
+import 'infrastructure/automation/pigeon_automation_gateway.dart';
 import 'infrastructure/settings/file_selector_local_model_file_picker.dart';
 
 class AriesRe0App extends StatefulWidget {
@@ -24,6 +27,7 @@ class AriesRe0App extends StatefulWidget {
     this.chatRuntime,
     this.localModels,
     this.localModelFilePicker,
+    this.automationRuntime,
     super.key,
   });
 
@@ -32,6 +36,7 @@ class AriesRe0App extends StatefulWidget {
   final ChatRuntime? chatRuntime;
   final LocalModelGateway? localModels;
   final LocalModelFilePicker? localModelFilePicker;
+  final AutomationRuntime? automationRuntime;
 
   @override
   State<AriesRe0App> createState() => _AriesRe0AppState();
@@ -43,6 +48,7 @@ class _AriesRe0AppState extends State<AriesRe0App> {
   late ChatRuntime _chatRuntime;
   late LocalModelGateway _localModels;
   late LocalModelFilePicker _localModelFilePicker;
+  late AutomationRuntime _automationRuntime;
   late final GoRouter _router;
 
   @override
@@ -55,11 +61,14 @@ class _AriesRe0AppState extends State<AriesRe0App> {
     _localModelFilePicker =
         widget.localModelFilePicker ?? FileSelectorLocalModelFilePicker();
     _chatRuntime = widget.chatRuntime ?? _createDefaultChatRuntime();
+    _automationRuntime = widget.automationRuntime ??
+        DefaultAutomationRuntime(gateway: PigeonAutomationGateway());
     _router = _createRouter(
       attachmentPicker: () => _attachmentPicker,
       chatRuntime: () => _chatRuntime,
       localModels: () => _localModels,
       localModelFilePicker: () => _localModelFilePicker,
+      automationRuntime: () => _automationRuntime,
     );
   }
 
@@ -89,6 +98,10 @@ class _AriesRe0AppState extends State<AriesRe0App> {
         (!identical(widget.localModels, oldWidget.localModels) &&
             widget.chatRuntime == null)) {
       _chatRuntime = widget.chatRuntime ?? _createDefaultChatRuntime();
+    }
+    if (!identical(widget.automationRuntime, oldWidget.automationRuntime)) {
+      _automationRuntime = widget.automationRuntime ??
+          DefaultAutomationRuntime(gateway: PigeonAutomationGateway());
     }
   }
 
@@ -134,6 +147,7 @@ GoRouter _createRouter({
   required ChatRuntime Function() chatRuntime,
   required LocalModelGateway Function() localModels,
   required LocalModelFilePicker Function() localModelFilePicker,
+  required AutomationRuntime Function() automationRuntime,
 }) =>
     GoRouter(
       initialLocation: '/',
@@ -153,6 +167,7 @@ GoRouter _createRouter({
               path: '/automation',
               builder: (context, state) => AutomationScreen(
                 repository: ApplicationRepositoryScope.of(context).automation,
+                runtime: automationRuntime(),
               ),
             ),
             GoRoute(

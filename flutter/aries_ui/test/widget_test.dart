@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_chat_attachment_picker.dart';
+import 'support/fake_automation_runtime.dart';
 
 void main() {
   testWidgets('re0 shell opens diagnostics tab', (tester) async {
@@ -18,7 +19,11 @@ void main() {
   });
 
   testWidgets('automation queues and completes a task', (tester) async {
-    await tester.pumpWidget(const AriesRe0App());
+    await tester.pumpWidget(
+      AriesRe0App(
+        automationRuntime: FakeAutomationRuntime.success('Captured 1080x2400'),
+      ),
+    );
 
     await tester.tap(find.text('Automation'));
     await tester.pumpAndSettle();

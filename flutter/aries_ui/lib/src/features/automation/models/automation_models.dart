@@ -1,4 +1,4 @@
-enum AutomationTaskStatus { queued, running, completed, cancelled }
+enum AutomationTaskStatus { queued, running, completed, failed, cancelled }
 
 class AutomationTask {
   const AutomationTask({

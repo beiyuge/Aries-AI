@@ -84,12 +84,56 @@ data class CapabilityHealthDto (
     )
   }
 }
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class AutomationResultDto (
+  val success: Boolean,
+  val summary: String,
+  val recoverable: Boolean,
+  val text: String? = null,
+  val bytes: ByteArray? = null,
+  val mimeType: String? = null,
+  val errorCode: String? = null,
+  val errorMessage: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): AutomationResultDto {
+      val success = pigeonVar_list[0] as Boolean
+      val summary = pigeonVar_list[1] as String
+      val recoverable = pigeonVar_list[2] as Boolean
+      val text = pigeonVar_list[3] as String?
+      val bytes = pigeonVar_list[4] as ByteArray?
+      val mimeType = pigeonVar_list[5] as String?
+      val errorCode = pigeonVar_list[6] as String?
+      val errorMessage = pigeonVar_list[7] as String?
+      return AutomationResultDto(success, summary, recoverable, text, bytes, mimeType, errorCode, errorMessage)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      success,
+      summary,
+      recoverable,
+      text,
+      bytes,
+      mimeType,
+      errorCode,
+      errorMessage,
+    )
+  }
+}
 private open class CapabilitiesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           CapabilityHealthDto.fromList(it)
+        }
+      }
+      130.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          AutomationResultDto.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -99,6 +143,10 @@ private open class CapabilitiesPigeonCodec : StandardMessageCodec() {
     when (value) {
       is CapabilityHealthDto -> {
         stream.write(129)
+        writeValue(stream, value.toList())
+      }
+      is AutomationResultDto -> {
+        stream.write(130)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -261,6 +309,169 @@ interface LocalModelHostApi {
                 reply.reply(wrapError(error))
               } else {
                 reply.reply(wrapResult(null))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/** Generated interface from Pigeon that represents a handler of messages from Flutter. */
+interface AutomationHostApi {
+  fun checkReadiness(callback: (Result<AutomationResultDto>) -> Unit)
+  fun dumpUiTree(detail: String, callback: (Result<AutomationResultDto>) -> Unit)
+  fun captureScreen(callback: (Result<AutomationResultDto>) -> Unit)
+  fun tap(x: Long, y: Long, callback: (Result<AutomationResultDto>) -> Unit)
+  fun swipe(fromX: Long, fromY: Long, toX: Long, toY: Long, durationMs: Long, callback: (Result<AutomationResultDto>) -> Unit)
+  fun typeText(text: String, callback: (Result<AutomationResultDto>) -> Unit)
+  fun pressKey(keyCode: Long, callback: (Result<AutomationResultDto>) -> Unit)
+
+  companion object {
+    /** The codec used by AutomationHostApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      CapabilitiesPigeonCodec()
+    }
+    /** Sets up an instance of `AutomationHostApi` to handle messages through the `binaryMessenger`. */
+    @JvmOverloads
+    fun setUp(binaryMessenger: BinaryMessenger, api: AutomationHostApi?, messageChannelSuffix: String = "") {
+      val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.checkReadiness$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.checkReadiness{ result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.dumpUiTree$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val detailArg = args[0] as String
+            api.dumpUiTree(detailArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.captureScreen$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.captureScreen{ result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.tap$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val xArg = args[0] as Long
+            val yArg = args[1] as Long
+            api.tap(xArg, yArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.swipe$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val fromXArg = args[0] as Long
+            val fromYArg = args[1] as Long
+            val toXArg = args[2] as Long
+            val toYArg = args[3] as Long
+            val durationMsArg = args[4] as Long
+            api.swipe(fromXArg, fromYArg, toXArg, toYArg, durationMsArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.typeText$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val textArg = args[0] as String
+            api.typeText(textArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.pressKey$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val keyCodeArg = args[0] as Long
+            api.pressKey(keyCodeArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
               }
             }
           }

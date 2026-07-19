@@ -11,6 +11,7 @@ import 'package:aries_ui/src/infrastructure/settings/persistent_settings_reposit
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_chat_runtime.dart';
+import 'support/fake_automation_runtime.dart';
 
 void main() {
   DateTime clock() => DateTime.utc(2026, 6, 29, 12);
@@ -83,6 +84,7 @@ void main() {
     final store = InMemoryStringStore();
     final controller = AutomationController(
       repository: PersistentAutomationRepository(store: store),
+      runtime: FakeAutomationRuntime.success('Captured 1080x2400'),
     );
 
     await controller.enqueue('capture screen');

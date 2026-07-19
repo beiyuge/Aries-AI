@@ -11,6 +11,7 @@
 
 - Pigeon code generation installed.
 - `CapabilityHostApi` bridged to `AndroidCapabilityRegistry`.
+- `AutomationHostApi` bridged to UI tree, screen capture, and input capabilities.
 - Diagnostics screen reads real native health.
 
 ## Milestone C: Base Android capabilities
@@ -19,6 +20,8 @@
 - Shizuku shell
 - screen capture / UI tree
 - input injection
+
+The first shared Automation command vocabulary now executes these registered capabilities and records native results. Multi-step planning, retries, artifact presentation, and agent-driven orchestration remain in progress.
 
 ## Milestone D: Complex Android capabilities
 

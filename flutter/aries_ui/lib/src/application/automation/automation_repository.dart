@@ -74,18 +74,3 @@ class InMemoryAutomationRepository implements AutomationRepository {
     _state = state;
   }
 }
-
-class AutomationPlanner {
-  const AutomationPlanner();
-
-  List<String> stepsFor(String title) {
-    final lower = title.toLowerCase();
-    if (lower.contains('type') || lower.contains('input')) {
-      return ['Dump UI tree', 'Find input target', 'Inject text'];
-    }
-    if (lower.contains('screen') || lower.contains('capture')) {
-      return ['Capture screen', 'Attach frame', 'Summarize state'];
-    }
-    return ['Plan', 'Check capabilities', 'Execute'];
-  }
-}

@@ -28,7 +28,8 @@ Flutter app
 - Chat attachment import now uses the host platform's native file selector behind a shared application contract, records MIME/size/source metadata, and enforces per-selection limits without platform checks in the UI.
 - Chat now uses a real OpenAI-compatible streaming runtime. Provider endpoints/models are configurable, redirects are rejected, API keys live in platform secure storage, and native file paths are excluded from provider requests.
 - Local model load/generate/unload is exposed through the same Pigeon schema. Settings can select and restore a model file, while Chat receives platform errors through shared typed events.
-- Attachment content/multimodal adapters, a production local inference engine, speech UI, full automation orchestration, richer Markdown, and real-device validation are still in progress.
+- Automation commands now flow through a shared planner/runtime/gateway into `AutomationHostApi`. Readiness, UI tree, screen capture, tap, swipe, text, and key operations dispatch to the registered native capabilities with typed success/failure results; Flutter never calls Android APIs directly.
+- Attachment content/multimodal adapters, a production local inference engine, speech UI, multi-step agent orchestration, richer Markdown, and real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 
 ## Verification

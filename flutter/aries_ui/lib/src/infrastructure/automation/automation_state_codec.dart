@@ -46,6 +46,7 @@ class AutomationStateCodec implements JsonStateCodec<AutomationState> {
       'queued' => AutomationTaskStatus.queued,
       'running' => AutomationTaskStatus.running,
       'completed' => AutomationTaskStatus.completed,
+      'failed' => AutomationTaskStatus.failed,
       'cancelled' => AutomationTaskStatus.cancelled,
       _ => throw FormatException('Unknown task status: $statusName'),
     };

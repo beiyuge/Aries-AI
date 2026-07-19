@@ -59,6 +59,8 @@ Remote Chat uses an OpenAI-compatible HTTP adapter behind `ChatRuntime`. It cons
 
 Local Chat uses `LocalModelGateway` and `LocalModelChatRuntime`. Pigeon generates `LocalModelHostApi` from the same schema as Diagnostics, the Android host adapter resolves `LocalModelCapability` from the registry, and model work runs away from the main thread. Model file selection is isolated behind `LocalModelFilePicker`; Settings persists the selected location and restores the native load after app recreation.
 
+Automation uses a shared `AutomationPlanner` to turn the first command vocabulary into platform-neutral command objects. `DefaultAutomationRuntime` routes those commands through `AutomationGateway`; the production Pigeon adapter calls `AutomationHostApi`, and the Android host resolves UI tree, screen capture, and input capabilities from `AndroidCapabilityRegistry`. Native JSON and image bytes stay typed bridge payloads, while task state records typed errors without embedding Android assumptions in Flutter.
+
 ## Rules
 
 1. Flutter does not call platform system APIs directly.

@@ -71,6 +71,61 @@ class CapabilityHealthDto {
   }
 }
 
+class AutomationResultDto {
+  AutomationResultDto({
+    required this.success,
+    required this.summary,
+    required this.recoverable,
+    this.text,
+    this.bytes,
+    this.mimeType,
+    this.errorCode,
+    this.errorMessage,
+  });
+
+  bool success;
+
+  String summary;
+
+  bool recoverable;
+
+  String? text;
+
+  Uint8List? bytes;
+
+  String? mimeType;
+
+  String? errorCode;
+
+  String? errorMessage;
+
+  Object encode() {
+    return <Object?>[
+      success,
+      summary,
+      recoverable,
+      text,
+      bytes,
+      mimeType,
+      errorCode,
+      errorMessage,
+    ];
+  }
+
+  static AutomationResultDto decode(Object result) {
+    result as List<Object?>;
+    return AutomationResultDto(
+      success: result[0]! as bool,
+      summary: result[1]! as String,
+      recoverable: result[2]! as bool,
+      text: result[3] as String?,
+      bytes: result[4] as Uint8List?,
+      mimeType: result[5] as String?,
+      errorCode: result[6] as String?,
+      errorMessage: result[7] as String?,
+    );
+  }
+}
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -79,8 +134,11 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is CapabilityHealthDto) {
+    } else if (value is CapabilityHealthDto) {
       buffer.putUint8(129);
+      writeValue(buffer, value.encode());
+    } else if (value is AutomationResultDto) {
+      buffer.putUint8(130);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -90,8 +148,10 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129: 
+      case 129:
         return CapabilityHealthDto.decode(readValue(buffer)!);
+      case 130:
+        return AutomationResultDto.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -102,9 +162,11 @@ class CapabilityHostApi {
   /// Constructor for [CapabilityHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  CapabilityHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  CapabilityHostApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -112,8 +174,10 @@ class CapabilityHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<List<String>> listCapabilities() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.CapabilityHostApi.listCapabilities$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.CapabilityHostApi.listCapabilities$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -139,8 +203,10 @@ class CapabilityHostApi {
   }
 
   Future<CapabilityHealthDto> getCapabilityHealth(String id) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.CapabilityHostApi.getCapabilityHealth$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.CapabilityHostApi.getCapabilityHealth$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -166,8 +232,10 @@ class CapabilityHostApi {
   }
 
   Future<String> runCapabilitySelfTest(String id) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.CapabilityHostApi.runCapabilitySelfTest$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.CapabilityHostApi.runCapabilitySelfTest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -193,8 +261,10 @@ class CapabilityHostApi {
   }
 
   Future<void> openCapabilitySettings(String id) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.CapabilityHostApi.openCapabilitySettings$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.CapabilityHostApi.openCapabilitySettings$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -219,9 +289,11 @@ class LocalModelHostApi {
   /// Constructor for [LocalModelHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  LocalModelHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  LocalModelHostApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -229,14 +301,16 @@ class LocalModelHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<void> loadLocalModel(String modelId, String path) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.LocalModelHostApi.loadLocalModel$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.LocalModelHostApi.loadLocalModel$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final List<Object?>? pigeonVar_replyList =
-        await pigeonVar_channel.send(<Object?>[modelId, path]) as List<Object?>?;
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[modelId, path]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -251,14 +325,16 @@ class LocalModelHostApi {
   }
 
   Future<String> generateLocalModel(String modelId, String prompt) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.LocalModelHostApi.generateLocalModel$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.LocalModelHostApi.generateLocalModel$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final List<Object?>? pigeonVar_replyList =
-        await pigeonVar_channel.send(<Object?>[modelId, prompt]) as List<Object?>?;
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[modelId, prompt]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -278,8 +354,10 @@ class LocalModelHostApi {
   }
 
   Future<void> unloadLocalModel(String modelId) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.aries_ui.LocalModelHostApi.unloadLocalModel$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.LocalModelHostApi.unloadLocalModel$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -296,6 +374,226 @@ class LocalModelHostApi {
       );
     } else {
       return;
+    }
+  }
+}
+
+class AutomationHostApi {
+  /// Constructor for [AutomationHostApi].  The [binaryMessenger] named argument is
+  /// available for dependency injection.  If it is left null, the default
+  /// BinaryMessenger will be used which routes to the host platform.
+  AutomationHostApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+      : pigeonVar_binaryMessenger = binaryMessenger,
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  final BinaryMessenger? pigeonVar_binaryMessenger;
+
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  final String pigeonVar_messageChannelSuffix;
+
+  Future<AutomationResultDto> checkReadiness() async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.checkReadiness$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(null) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
+    }
+  }
+
+  Future<AutomationResultDto> dumpUiTree(String detail) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.dumpUiTree$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[detail]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
+    }
+  }
+
+  Future<AutomationResultDto> captureScreen() async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.captureScreen$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(null) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
+    }
+  }
+
+  Future<AutomationResultDto> tap(int x, int y) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.tap$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[x, y]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
+    }
+  }
+
+  Future<AutomationResultDto> swipe(
+      int fromX, int fromY, int toX, int toY, int durationMs) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.swipe$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[fromX, fromY, toX, toY, durationMs]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
+    }
+  }
+
+  Future<AutomationResultDto> typeText(String text) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.typeText$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[text]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
+    }
+  }
+
+  Future<AutomationResultDto> pressKey(int keyCode) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.aries_ui.AutomationHostApi.pressKey$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[keyCode]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as AutomationResultDto?)!;
     }
   }
 }

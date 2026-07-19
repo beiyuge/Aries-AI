@@ -1,36 +1,49 @@
 import 'package:flutter/material.dart';
 
 import '../../application/automation/automation_repository.dart';
+import '../../application/automation/automation_runtime.dart';
 import 'controllers/automation_controller.dart';
 import 'widgets/automation_task_card.dart';
 import 'widgets/capability_lane.dart';
 import 'widgets/task_composer.dart';
 
 class AutomationScreen extends StatefulWidget {
-  const AutomationScreen({required this.repository, super.key});
+  const AutomationScreen({
+    required this.repository,
+    required this.runtime,
+    super.key,
+  });
 
   final AutomationRepository repository;
+  final AutomationRuntime runtime;
 
   @override
   State<AutomationScreen> createState() => _AutomationScreenState();
 }
 
 class _AutomationScreenState extends State<AutomationScreen> {
-  late final AutomationController _controller;
+  late AutomationController _controller;
   final TextEditingController _taskController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _controller = AutomationController(repository: widget.repository);
+    _controller = AutomationController(
+      repository: widget.repository,
+      runtime: widget.runtime,
+    );
   }
 
   @override
   void didUpdateWidget(AutomationScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(widget.repository, oldWidget.repository)) {
+    if (!identical(widget.repository, oldWidget.repository) ||
+        !identical(widget.runtime, oldWidget.runtime)) {
       _controller.dispose();
-      _controller = AutomationController(repository: widget.repository);
+      _controller = AutomationController(
+        repository: widget.repository,
+        runtime: widget.runtime,
+      );
     }
   }
 

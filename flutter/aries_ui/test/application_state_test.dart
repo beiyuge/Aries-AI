@@ -1,4 +1,5 @@
 import 'package:aries_ui/src/application/automation/automation_repository.dart';
+import 'package:aries_ui/src/application/automation/automation_command.dart';
 import 'package:aries_ui/src/application/chat/chat_attachment_picker.dart';
 import 'package:aries_ui/src/application/chat/chat_repository.dart';
 import 'package:aries_ui/src/application/settings/settings_repository.dart';
@@ -9,6 +10,7 @@ import 'package:aries_ui/src/features/settings/controllers/settings_controller.d
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_chat_runtime.dart';
+import 'support/fake_automation_runtime.dart';
 
 void main() {
   DateTime clock() => DateTime(2026, 6, 29, 12);
@@ -68,7 +70,11 @@ void main() {
     'automation state survives controller recreation through its repository',
     () async {
       final repository = InMemoryAutomationRepository();
-      final controller = AutomationController(repository: repository);
+      final runtime = FakeAutomationRuntime.success('Captured 1080x2400');
+      final controller = AutomationController(
+        repository: repository,
+        runtime: runtime,
+      );
 
       await controller.enqueue('capture screen');
       await controller.run(controller.tasks.first.id);
@@ -76,7 +82,8 @@ void main() {
       final restored = AutomationController(repository: repository);
       expect(restored.tasks.first.title, 'capture screen');
       expect(restored.tasks.first.status, AutomationTaskStatus.completed);
-      expect(restored.tasks.first.steps.last, 'Result captured');
+      expect(restored.tasks.first.steps.last, 'Captured 1080x2400');
+      expect(runtime.commands.single, isA<CaptureScreenCommand>());
     },
   );
 }

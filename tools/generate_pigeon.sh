@@ -10,3 +10,5 @@ flutter pub get
 dart run pigeon \
   --input "$ROOT_DIR/pigeons/capabilities.dart" \
   --base_path "$ROOT_DIR"
+
+dart format "$ROOT_DIR/flutter/aries_ui/lib/src/generated/capabilities.g.dart"
