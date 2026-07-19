@@ -1,4 +1,5 @@
 import 'package:aries_ui/src/application/automation/automation_repository.dart';
+import 'package:aries_ui/src/application/chat/chat_attachment_picker.dart';
 import 'package:aries_ui/src/application/chat/chat_repository.dart';
 import 'package:aries_ui/src/application/settings/settings_repository.dart';
 import 'package:aries_ui/src/features/automation/controllers/automation_controller.dart';
@@ -17,7 +18,14 @@ void main() {
 
     await controller.startNewSession();
     await controller.selectModel('automation.copilot');
-    await controller.addSampleAttachment();
+    await controller.addAttachments(const [
+      PickedChatAttachment(
+        name: 'screen-context.json',
+        mimeType: 'application/json',
+        byteLength: 8192,
+        source: '/tmp/screen-context.json',
+      ),
+    ]);
     await controller.send('Inspect the active screen');
 
     final restored = ChatController(repository: repository, clock: clock);

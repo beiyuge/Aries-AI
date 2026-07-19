@@ -26,7 +26,9 @@ class AttachmentStrip extends StatelessWidget {
           final attachment = attachments[index];
           return InputChip(
             avatar: const Icon(Icons.description_outlined, size: 18),
-            label: Text('${attachment.name} · ${attachment.sizeLabel}'),
+            label: Text(
+              '${attachment.name} · ${formatAttachmentSize(attachment.byteLength)}',
+            ),
             onDeleted: () => onRemove(attachment.id),
           );
         },
@@ -35,4 +37,17 @@ class AttachmentStrip extends StatelessWidget {
       ),
     );
   }
+}
+
+String formatAttachmentSize(int bytes) {
+  const kibibyte = 1024;
+  const mebibyte = kibibyte * 1024;
+  if (bytes <= 0) {
+    return 'Size unavailable';
+  }
+  if (bytes >= mebibyte) {
+    final precision = bytes >= 10 * mebibyte ? 0 : 1;
+    return '${(bytes / mebibyte).toStringAsFixed(precision)} MB';
+  }
+  return '${(bytes / kibibyte).ceil()} KB';
 }

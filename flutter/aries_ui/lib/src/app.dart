@@ -3,15 +3,18 @@ import 'package:go_router/go_router.dart';
 
 import 'application/application_repositories.dart';
 import 'application/application_repository_scope.dart';
+import 'application/chat/chat_attachment_picker.dart';
 import 'features/automation/automation_screen.dart';
 import 'features/chat/chat_screen.dart';
 import 'features/diagnostics/diagnostics_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'infrastructure/chat/file_selector_chat_attachment_picker.dart';
 
 class AriesRe0App extends StatefulWidget {
-  const AriesRe0App({this.repositories, super.key});
+  const AriesRe0App({this.repositories, this.attachmentPicker, super.key});
 
   final ApplicationRepositories? repositories;
+  final ChatAttachmentPicker? attachmentPicker;
 
   @override
   State<AriesRe0App> createState() => _AriesRe0AppState();
@@ -19,13 +22,16 @@ class AriesRe0App extends StatefulWidget {
 
 class _AriesRe0AppState extends State<AriesRe0App> {
   late ApplicationRepositories _repositories;
+  late ChatAttachmentPicker _attachmentPicker;
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
     _repositories = widget.repositories ?? ApplicationRepositories.inMemory();
-    _router = _createRouter();
+    _attachmentPicker =
+        widget.attachmentPicker ?? FileSelectorChatAttachmentPicker();
+    _router = _createRouter(attachmentPicker: () => _attachmentPicker);
   }
 
   @override
@@ -33,6 +39,10 @@ class _AriesRe0AppState extends State<AriesRe0App> {
     super.didUpdateWidget(oldWidget);
     if (!identical(widget.repositories, oldWidget.repositories)) {
       _repositories = widget.repositories ?? ApplicationRepositories.inMemory();
+    }
+    if (!identical(widget.attachmentPicker, oldWidget.attachmentPicker)) {
+      _attachmentPicker =
+          widget.attachmentPicker ?? FileSelectorChatAttachmentPicker();
     }
   }
 
@@ -62,7 +72,10 @@ class _AriesRe0AppState extends State<AriesRe0App> {
   }
 }
 
-GoRouter _createRouter() => GoRouter(
+GoRouter _createRouter({
+  required ChatAttachmentPicker Function() attachmentPicker,
+}) =>
+    GoRouter(
       initialLocation: '/',
       routes: [
         ShellRoute(
@@ -72,6 +85,7 @@ GoRouter _createRouter() => GoRouter(
               path: '/',
               builder: (context, state) => ChatScreen(
                 repository: ApplicationRepositoryScope.of(context).chat,
+                attachmentPicker: attachmentPicker(),
               ),
             ),
             GoRoute(

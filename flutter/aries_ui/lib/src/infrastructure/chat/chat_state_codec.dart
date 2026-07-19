@@ -109,7 +109,8 @@ class ChatStateCodec implements JsonStateCodec<ChatState> {
       'id': attachment.id,
       'name': attachment.name,
       'mimeType': attachment.mimeType,
-      'sizeLabel': attachment.sizeLabel,
+      'byteLength': attachment.byteLength,
+      'source': attachment.source,
     };
   }
 
@@ -118,7 +119,10 @@ class ChatStateCodec implements JsonStateCodec<ChatState> {
       id: JsonValue.string(value['id'], 'attachment.id'),
       name: JsonValue.string(value['name'], 'attachment.name'),
       mimeType: JsonValue.string(value['mimeType'], 'attachment.mimeType'),
-      sizeLabel: JsonValue.string(value['sizeLabel'], 'attachment.sizeLabel'),
+      byteLength: value['byteLength'] == null
+          ? 0
+          : JsonValue.integer(value['byteLength'], 'attachment.byteLength'),
+      source: value['source'] is String ? value['source']! as String : '',
     );
   }
 }

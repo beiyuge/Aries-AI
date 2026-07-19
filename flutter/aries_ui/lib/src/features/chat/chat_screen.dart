@@ -1,5 +1,7 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
+import '../../application/chat/chat_attachment_picker.dart';
 import '../../application/chat/chat_repository.dart';
 import 'controllers/chat_controller.dart';
 import 'widgets/attachment_strip.dart';
@@ -9,16 +11,21 @@ import 'widgets/chat_message_bubble.dart';
 import 'widgets/chat_toolbar.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({required this.repository, super.key});
+  const ChatScreen({
+    required this.repository,
+    required this.attachmentPicker,
+    super.key,
+  });
 
   final ChatRepository repository;
+  final ChatAttachmentPicker attachmentPicker;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late final ChatController _controller;
+  late ChatController _controller;
   final TextEditingController _composerController = TextEditingController();
 
   @override
@@ -86,7 +93,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ChatComposer(
                   controller: _composerController,
                   onSend: _send,
-                  onAttach: _controller.addSampleAttachment,
+                  onAttach: _pickAttachments,
                 ),
               ],
             ),
@@ -94,6 +101,27 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       },
     );
+  }
+
+  Future<void> _pickAttachments() async {
+    try {
+      final attachments = await widget.attachmentPicker.pick();
+      await _controller.addAttachments(attachments);
+    } on ChatAttachmentPickerException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } on MissingPluginException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'File picker unavailable.')),
+      );
+    }
   }
 
   Future<void> _send() async {

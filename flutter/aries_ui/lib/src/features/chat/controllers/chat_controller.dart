@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../application/chat/chat_attachment_picker.dart';
 import '../../../application/chat/chat_repository.dart';
 import '../models/chat_models.dart';
 
@@ -76,17 +77,25 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  Future<void> addSampleAttachment() {
+  Future<void> addAttachments(Iterable<PickedChatAttachment> attachments) {
+    final additions = [
+      for (final attachment in attachments)
+        ChatAttachment(
+          id: _id('attachment'),
+          name: attachment.name,
+          mimeType: attachment.mimeType,
+          byteLength: attachment.byteLength,
+          source: attachment.source,
+        ),
+    ];
+    if (additions.isEmpty) {
+      return Future.value();
+    }
     return _save(
       _state.copyWith(
         pendingAttachments: [
           ..._state.pendingAttachments,
-          ChatAttachment(
-            id: _id('attachment'),
-            name: 'screen-context.json',
-            mimeType: 'application/json',
-            sizeLabel: '8 KB',
-          ),
+          ...additions,
         ],
       ),
     );

@@ -25,7 +25,8 @@ Flutter app
 - Flutter Chat, Automation, and Settings screens now have usable shared UI surfaces with split feature controllers, models, and widgets.
 - Chat, Automation, and Settings state now flows through shared Flutter application repositories, preparing the app for durable history, provider persistence, and real model and automation adapters.
 - Cross-platform preference adapters now persist chat history, attachments, provider/runtime preferences, and the automation queue with versioned JSON and safe fallback for incompatible state.
-- Deeper chat streaming, real attachment import, richer Markdown, editable provider credentials, and full real-device validation are still in progress.
+- Chat attachment import now uses the host platform's native file selector behind a shared application contract, records MIME/size/source metadata, and enforces per-selection limits without platform checks in the UI.
+- Deeper chat streaming, attachment content adapters, richer Markdown, editable provider credentials, and full real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 
 ## Verification

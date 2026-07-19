@@ -14,6 +14,10 @@ dependencies:
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
   drift: ^2.24.0
+  file_selector: ^1.1.0
+  # 0.5.2+5 uses the same unresolved Kotlin DSL Flutter accessor as the host.
+  file_selector_android: 0.5.2+4
+  mime: ^2.0.0
   shared_preferences: ^2.5.5
   # 2.4.22+ uses a Kotlin DSL accessor that is not resolved by this add-to-app host.
   shared_preferences_android: 2.4.21

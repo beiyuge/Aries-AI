@@ -5,13 +5,15 @@ class ChatAttachment {
     required this.id,
     required this.name,
     required this.mimeType,
-    required this.sizeLabel,
+    required this.byteLength,
+    required this.source,
   });
 
   final String id;
   final String name;
   final String mimeType;
-  final String sizeLabel;
+  final int byteLength;
+  final String source;
 }
 
 class ChatMessage {

@@ -2,6 +2,8 @@ import 'package:aries_ui/src/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_chat_attachment_picker.dart';
+
 void main() {
   testWidgets('re0 shell shows app title and chat tab', (tester) async {
     await tester.pumpWidget(const AriesRe0App());
@@ -11,7 +13,9 @@ void main() {
   });
 
   testWidgets('chat sends messages with attachments', (tester) async {
-    await tester.pumpWidget(const AriesRe0App());
+    await tester.pumpWidget(
+      AriesRe0App(attachmentPicker: FakeChatAttachmentPicker.single()),
+    );
 
     await tester.tap(find.byTooltip('Attach'));
     await tester.pump();

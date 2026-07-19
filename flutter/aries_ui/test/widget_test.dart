@@ -2,6 +2,8 @@ import 'package:aries_ui/src/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_chat_attachment_picker.dart';
+
 void main() {
   testWidgets('re0 shell opens diagnostics tab', (tester) async {
     await tester.pumpWidget(const AriesRe0App());
@@ -47,5 +49,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('native runtime'), findsOneWidget);
+  });
+
+  testWidgets('chat attachment button uses the platform-neutral picker',
+      (tester) async {
+    await tester.pumpWidget(
+      AriesRe0App(
+        attachmentPicker: FakeChatAttachmentPicker.single(
+          name: 'notes.txt',
+          mimeType: 'text/plain',
+          byteLength: 1536,
+          source: '/tmp/notes.txt',
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Attach'));
+    await tester.pump();
+
+    expect(find.textContaining('notes.txt'), findsOneWidget);
+    expect(find.textContaining('2 KB'), findsOneWidget);
   });
 }

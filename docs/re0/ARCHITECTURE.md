@@ -53,6 +53,8 @@ platform/<future>/*
 
 The Android federated implementation of `shared_preferences` is pinned to `2.4.21` until the Kotlin DSL extension accessor introduced in `2.4.22` works in this add-to-app build. The shared Dart interface remains on `shared_preferences 2.5.x`.
 
+Chat attachment selection uses Flutter's federated `file_selector` API behind `ChatAttachmentPicker`; feature UI and controllers only receive platform-neutral metadata. `file_selector_android` is pinned to `0.5.2+4`, the last Groovy build before the same unresolved Kotlin DSL Flutter accessor appeared in `0.5.2+5`.
+
 ## Rules
 
 1. Flutter does not call platform system APIs directly.
@@ -64,3 +66,4 @@ The Android federated implementation of `shared_preferences` is pinned to `2.4.2
 7. No new code may import old `app/` classes; the old `app/` tree is absent in this branch.
 8. Shared application state is injected at the app composition root; feature screens must not create private persistence adapters.
 9. Persisted state uses explicit schema versions and must recover safely when data is malformed or from an unsupported future schema.
+10. Cross-platform device services such as file selection are injected behind application contracts; feature controllers do not import Flutter plugin packages.

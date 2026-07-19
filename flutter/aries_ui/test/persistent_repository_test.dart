@@ -1,3 +1,4 @@
+import 'package:aries_ui/src/application/chat/chat_attachment_picker.dart';
 import 'package:aries_ui/src/features/automation/controllers/automation_controller.dart';
 import 'package:aries_ui/src/features/automation/models/automation_models.dart';
 import 'package:aries_ui/src/features/chat/controllers/chat_controller.dart';
@@ -21,7 +22,14 @@ void main() {
     );
 
     await controller.startNewSession();
-    await controller.addSampleAttachment();
+    await controller.addAttachments(const [
+      PickedChatAttachment(
+        name: 'screen-context.json',
+        mimeType: 'application/json',
+        byteLength: 8192,
+        source: '/tmp/screen-context.json',
+      ),
+    ]);
     await controller.send('Persist this conversation');
 
     final restored = ChatController(
@@ -29,8 +37,10 @@ void main() {
       clock: clock,
     );
     expect(restored.activeSession.title, 'Persist this conversation');
-    expect(restored.activeSession.messages[1].attachments.single.name,
-        'screen-context.json');
+    final attachment = restored.activeSession.messages[1].attachments.single;
+    expect(attachment.name, 'screen-context.json');
+    expect(attachment.byteLength, 8192);
+    expect(attachment.source, '/tmp/screen-context.json');
     expect(restored.activeSession.updatedAt, clock());
   });
 
