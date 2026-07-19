@@ -4,17 +4,34 @@ import 'package:go_router/go_router.dart';
 import 'application/application_repositories.dart';
 import 'application/application_repository_scope.dart';
 import 'application/chat/chat_attachment_picker.dart';
+import 'application/chat/chat_runtime.dart';
+import 'application/chat/local_model_gateway.dart';
+import 'application/settings/local_model_file_picker.dart';
 import 'features/automation/automation_screen.dart';
 import 'features/chat/chat_screen.dart';
 import 'features/diagnostics/diagnostics_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'infrastructure/chat/file_selector_chat_attachment_picker.dart';
+import 'infrastructure/chat/default_chat_runtime.dart';
+import 'infrastructure/chat/local_model_chat_runtime.dart';
+import 'infrastructure/chat/pigeon_local_model_gateway.dart';
+import 'infrastructure/settings/file_selector_local_model_file_picker.dart';
 
 class AriesRe0App extends StatefulWidget {
-  const AriesRe0App({this.repositories, this.attachmentPicker, super.key});
+  const AriesRe0App({
+    this.repositories,
+    this.attachmentPicker,
+    this.chatRuntime,
+    this.localModels,
+    this.localModelFilePicker,
+    super.key,
+  });
 
   final ApplicationRepositories? repositories;
   final ChatAttachmentPicker? attachmentPicker;
+  final ChatRuntime? chatRuntime;
+  final LocalModelGateway? localModels;
+  final LocalModelFilePicker? localModelFilePicker;
 
   @override
   State<AriesRe0App> createState() => _AriesRe0AppState();
@@ -23,6 +40,9 @@ class AriesRe0App extends StatefulWidget {
 class _AriesRe0AppState extends State<AriesRe0App> {
   late ApplicationRepositories _repositories;
   late ChatAttachmentPicker _attachmentPicker;
+  late ChatRuntime _chatRuntime;
+  late LocalModelGateway _localModels;
+  late LocalModelFilePicker _localModelFilePicker;
   late final GoRouter _router;
 
   @override
@@ -31,7 +51,16 @@ class _AriesRe0AppState extends State<AriesRe0App> {
     _repositories = widget.repositories ?? ApplicationRepositories.inMemory();
     _attachmentPicker =
         widget.attachmentPicker ?? FileSelectorChatAttachmentPicker();
-    _router = _createRouter(attachmentPicker: () => _attachmentPicker);
+    _localModels = widget.localModels ?? PigeonLocalModelGateway();
+    _localModelFilePicker =
+        widget.localModelFilePicker ?? FileSelectorLocalModelFilePicker();
+    _chatRuntime = widget.chatRuntime ?? _createDefaultChatRuntime();
+    _router = _createRouter(
+      attachmentPicker: () => _attachmentPicker,
+      chatRuntime: () => _chatRuntime,
+      localModels: () => _localModels,
+      localModelFilePicker: () => _localModelFilePicker,
+    );
   }
 
   @override
@@ -43,6 +72,23 @@ class _AriesRe0AppState extends State<AriesRe0App> {
     if (!identical(widget.attachmentPicker, oldWidget.attachmentPicker)) {
       _attachmentPicker =
           widget.attachmentPicker ?? FileSelectorChatAttachmentPicker();
+    }
+    if (!identical(widget.localModels, oldWidget.localModels)) {
+      _localModels = widget.localModels ?? PigeonLocalModelGateway();
+    }
+    if (!identical(
+      widget.localModelFilePicker,
+      oldWidget.localModelFilePicker,
+    )) {
+      _localModelFilePicker =
+          widget.localModelFilePicker ?? FileSelectorLocalModelFilePicker();
+    }
+    if (!identical(widget.chatRuntime, oldWidget.chatRuntime) ||
+        (!identical(widget.repositories, oldWidget.repositories) &&
+            widget.chatRuntime == null) ||
+        (!identical(widget.localModels, oldWidget.localModels) &&
+            widget.chatRuntime == null)) {
+      _chatRuntime = widget.chatRuntime ?? _createDefaultChatRuntime();
     }
   }
 
@@ -70,10 +116,24 @@ class _AriesRe0AppState extends State<AriesRe0App> {
       ),
     );
   }
+
+  ChatRuntime _createDefaultChatRuntime() {
+    return DefaultChatRuntime(
+      settings: _repositories.settings,
+      credentials: _repositories.providerCredentials,
+      localRuntime: LocalModelChatRuntime(
+        gateway: _localModels,
+        settings: _repositories.settings,
+      ),
+    );
+  }
 }
 
 GoRouter _createRouter({
   required ChatAttachmentPicker Function() attachmentPicker,
+  required ChatRuntime Function() chatRuntime,
+  required LocalModelGateway Function() localModels,
+  required LocalModelFilePicker Function() localModelFilePicker,
 }) =>
     GoRouter(
       initialLocation: '/',
@@ -86,6 +146,7 @@ GoRouter _createRouter({
               builder: (context, state) => ChatScreen(
                 repository: ApplicationRepositoryScope.of(context).chat,
                 attachmentPicker: attachmentPicker(),
+                runtime: chatRuntime(),
               ),
             ),
             GoRoute(
@@ -101,6 +162,10 @@ GoRouter _createRouter({
               path: '/settings',
               builder: (context, state) => SettingsScreen(
                 repository: ApplicationRepositoryScope.of(context).settings,
+                credentials:
+                    ApplicationRepositoryScope.of(context).providerCredentials,
+                localModels: localModels(),
+                localModelFilePicker: localModelFilePicker(),
               ),
             ),
           ],

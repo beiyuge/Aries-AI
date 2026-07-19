@@ -2,6 +2,13 @@
 
 The rewrite is not complete until all items below are true.
 
+## Current verified evidence
+
+- Flutter analysis and 35 shared/unit/widget tests pass for persisted app state, native file selection, remote streaming, secure credential routing, local-model routing, and settings recovery.
+- Android `LocalModelHostApi` load/generate/unload has a registry-backed host adapter and JVM tests.
+- `app-re0` assembles with Flutter plugin registration for preferences, file selection, and secure storage.
+- Emulator validation is useful during development but does not replace the real-device checklist below.
+
 ## Build and test
 
 - `./gradlew test` passes under the checked-in toolchain configuration.
@@ -30,6 +37,8 @@ The rewrite is not complete until all items below are true.
 - Floating: overlay permission, service lifecycle, notification, content host.
 - Background: durable task scheduling and diagnostics.
 - Native runtime: model load/unload/generate and speech recognition wrappers.
+
+The current file-backed local-model backend validates bridge behavior but is not a production inference engine. This item remains open until a real engine is integrated and validated with an actual model.
 
 ## Future platform readiness
 

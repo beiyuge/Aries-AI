@@ -14,7 +14,7 @@ flutter/aries_ui
 flutter/aries_ui/lib/src/application
     Shared application state and repository interfaces
 flutter/aries_ui/lib/src/infrastructure
-    Cross-platform repository adapters, codecs, and local persistence
+    Repository/plugin adapters, provider runtimes, codecs, secure credentials
 pigeons/capabilities.dart
     Typed Flutter <-> host API surface
 app-re0
@@ -55,6 +55,10 @@ The Android federated implementation of `shared_preferences` is pinned to `2.4.2
 
 Chat attachment selection uses Flutter's federated `file_selector` API behind `ChatAttachmentPicker`; feature UI and controllers only receive platform-neutral metadata. `file_selector_android` is pinned to `0.5.2+4`, the last Groovy build before the same unresolved Kotlin DSL Flutter accessor appeared in `0.5.2+5`.
 
+Remote Chat uses an OpenAI-compatible HTTP adapter behind `ChatRuntime`. It consumes streaming SSE or ordinary JSON responses, rejects redirects before credentials can be forwarded, and maps network/protocol failures to shared typed events. Provider API keys are accessed through `ProviderCredentialStore`; the production adapter uses platform secure storage and never writes keys into the versioned settings JSON.
+
+Local Chat uses `LocalModelGateway` and `LocalModelChatRuntime`. Pigeon generates `LocalModelHostApi` from the same schema as Diagnostics, the Android host adapter resolves `LocalModelCapability` from the registry, and model work runs away from the main thread. Model file selection is isolated behind `LocalModelFilePicker`; Settings persists the selected location and restores the native load after app recreation.
+
 ## Rules
 
 1. Flutter does not call platform system APIs directly.
@@ -67,3 +71,5 @@ Chat attachment selection uses Flutter's federated `file_selector` API behind `C
 8. Shared application state is injected at the app composition root; feature screens must not create private persistence adapters.
 9. Persisted state uses explicit schema versions and must recover safely when data is malformed or from an unsupported future schema.
 10. Cross-platform device services such as file selection are injected behind application contracts; feature controllers do not import Flutter plugin packages.
+11. Provider credentials are stored separately from ordinary settings and must not be forwarded across redirects.
+12. Chat controllers consume `ChatRuntime`; provider and local-model protocol details remain infrastructure adapters.

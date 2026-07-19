@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_chat_attachment_picker.dart';
+import 'support/fake_chat_runtime.dart';
 
 void main() {
   testWidgets('re0 shell shows app title and chat tab', (tester) async {
@@ -14,7 +15,10 @@ void main() {
 
   testWidgets('chat sends messages with attachments', (tester) async {
     await tester.pumpWidget(
-      AriesRe0App(attachmentPicker: FakeChatAttachmentPicker.single()),
+      AriesRe0App(
+        attachmentPicker: FakeChatAttachmentPicker.single(),
+        chatRuntime: FakeChatRuntime.text('Screen captured.'),
+      ),
     );
 
     await tester.tap(find.byTooltip('Attach'));
@@ -27,7 +31,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('capture the current screen'), findsOneWidget);
-    expect(find.text('Draft'), findsOneWidget);
+    expect(find.text('Screen captured.'), findsOneWidget);
     expect(find.text('screen-context.json'), findsWidgets);
   });
 }

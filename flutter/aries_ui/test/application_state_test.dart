@@ -8,13 +8,20 @@ import 'package:aries_ui/src/features/chat/controllers/chat_controller.dart';
 import 'package:aries_ui/src/features/settings/controllers/settings_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_chat_runtime.dart';
+
 void main() {
   DateTime clock() => DateTime(2026, 6, 29, 12);
 
   test('chat state survives controller recreation through its repository',
       () async {
     final repository = InMemoryChatRepository(clock: clock);
-    final controller = ChatController(repository: repository, clock: clock);
+    final runtime = FakeChatRuntime.text('automation.copilot ready');
+    final controller = ChatController(
+      repository: repository,
+      runtime: runtime,
+      clock: clock,
+    );
 
     await controller.startNewSession();
     await controller.selectModel('automation.copilot');
@@ -36,6 +43,7 @@ void main() {
       restored.activeSession.messages.last.markdown,
       contains('automation.copilot'),
     );
+    expect(runtime.requests.single.modelId, 'automation.copilot');
     expect(restored.activeSession.messages[1].attachments, hasLength(1));
   });
 

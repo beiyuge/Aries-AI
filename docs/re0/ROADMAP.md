@@ -30,10 +30,10 @@
 ## Milestone E: Native runtime and UI parity
 
 - speech recognition
-- local model wrapper
-- chat UI parity
-- settings/provider parity
-- history/attachments/Markdown parity
+- local model wrapper: typed host bridge and model-file lifecycle complete; production inference engine pending
+- chat UI parity: real remote/local runtime routing complete; richer rendering and interaction parity pending
+- settings/provider parity: editable endpoints and secure API keys complete; broader provider options pending
+- history/attachments/Markdown parity: durable history and native selection complete; attachment content and richer Markdown pending
 
 ## Milestone F: Additional platform backends
 

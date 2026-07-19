@@ -6,6 +6,7 @@ import 'chat/persistent_chat_repository.dart';
 import 'persistence/persistence_keys.dart';
 import 'persistence/shared_preferences_string_store.dart';
 import 'settings/persistent_settings_repository.dart';
+import 'settings/flutter_secure_provider_credential_store.dart';
 
 class ApplicationRepositoryFactory {
   const ApplicationRepositoryFactory._();
@@ -23,6 +24,7 @@ class ApplicationRepositoryFactory {
       chat: PersistentChatRepository(store: store, clock: clock),
       settings: PersistentSettingsRepository(store: store),
       automation: PersistentAutomationRepository(store: store),
+      providerCredentials: FlutterSecureProviderCredentialStore(),
     );
   }
 }

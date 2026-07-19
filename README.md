@@ -23,10 +23,12 @@ Flutter app
 - Diagnostics reads native capability health from `AndroidCapabilityRegistry`.
 - Android Diagnostics now reads live health for permissions, Shizuku shell, accessibility, screen capture, UI tree, input injection, virtual display, floating window, background tasks, native runtime, speech recognition, and local model wrapper capabilities.
 - Flutter Chat, Automation, and Settings screens now have usable shared UI surfaces with split feature controllers, models, and widgets.
-- Chat, Automation, and Settings state now flows through shared Flutter application repositories, preparing the app for durable history, provider persistence, and real model and automation adapters.
+- Chat, Automation, and Settings state flows through shared Flutter application repositories with durable history and provider/runtime persistence.
 - Cross-platform preference adapters now persist chat history, attachments, provider/runtime preferences, and the automation queue with versioned JSON and safe fallback for incompatible state.
 - Chat attachment import now uses the host platform's native file selector behind a shared application contract, records MIME/size/source metadata, and enforces per-selection limits without platform checks in the UI.
-- Deeper chat streaming, attachment content adapters, richer Markdown, editable provider credentials, and full real-device validation are still in progress.
+- Chat now uses a real OpenAI-compatible streaming runtime. Provider endpoints/models are configurable, redirects are rejected, API keys live in platform secure storage, and native file paths are excluded from provider requests.
+- Local model load/generate/unload is exposed through the same Pigeon schema. Settings can select and restore a model file, while Chat receives platform errors through shared typed events.
+- Attachment content/multimodal adapters, a production local inference engine, speech UI, full automation orchestration, richer Markdown, and real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 
 ## Verification

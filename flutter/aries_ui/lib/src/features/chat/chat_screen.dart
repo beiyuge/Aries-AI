@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../application/chat/chat_attachment_picker.dart';
 import '../../application/chat/chat_repository.dart';
+import '../../application/chat/chat_runtime.dart';
 import 'controllers/chat_controller.dart';
 import 'widgets/attachment_strip.dart';
 import 'widgets/chat_composer.dart';
@@ -14,11 +15,13 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     required this.repository,
     required this.attachmentPicker,
+    required this.runtime,
     super.key,
   });
 
   final ChatRepository repository;
   final ChatAttachmentPicker attachmentPicker;
+  final ChatRuntime runtime;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -31,15 +34,22 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = ChatController(repository: widget.repository);
+    _controller = ChatController(
+      repository: widget.repository,
+      runtime: widget.runtime,
+    );
   }
 
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(widget.repository, oldWidget.repository)) {
+    if (!identical(widget.repository, oldWidget.repository) ||
+        !identical(widget.runtime, oldWidget.runtime)) {
       _controller.dispose();
-      _controller = ChatController(repository: widget.repository);
+      _controller = ChatController(
+        repository: widget.repository,
+        runtime: widget.runtime,
+      );
     }
   }
 
@@ -94,6 +104,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   controller: _composerController,
                   onSend: _send,
                   onAttach: _pickAttachments,
+                  sending: _controller.isGenerating,
                 ),
               ],
             ),

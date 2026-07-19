@@ -2,23 +2,29 @@ import 'package:flutter/foundation.dart';
 
 import '../../../application/chat/chat_attachment_picker.dart';
 import '../../../application/chat/chat_repository.dart';
+import '../../../application/chat/chat_runtime.dart';
+import '../../../application/chat/chat_title_generator.dart';
 import '../models/chat_models.dart';
 
 class ChatController extends ChangeNotifier {
   ChatController({
     ChatRepository? repository,
-    ChatDraftResponder? draftResponder,
+    ChatRuntime? runtime,
+    ChatTitleGenerator titleGenerator = const ChatTitleGenerator(),
     DateTime Function()? clock,
   })  : _repository = repository ?? InMemoryChatRepository(clock: clock),
-        _draftResponder = draftResponder ?? const ChatDraftResponder(),
+        _runtime = runtime ?? const UnavailableChatRuntime(),
+        _titleGenerator = titleGenerator,
         _clock = clock ?? DateTime.now {
     _state = _repository.load();
   }
 
   final ChatRepository _repository;
-  final ChatDraftResponder _draftResponder;
+  final ChatRuntime _runtime;
+  final ChatTitleGenerator _titleGenerator;
   final DateTime Function() _clock;
   late ChatState _state;
+  bool _isGenerating = false;
 
   List<ChatSession> get sessions => _state.sessions;
 
@@ -27,6 +33,7 @@ class ChatController extends ChangeNotifier {
   List<ChatAttachment> get pendingAttachments => _state.pendingAttachments;
 
   String get selectedModelId => _state.selectedModelId;
+  bool get isGenerating => _isGenerating;
 
   List<ChatModelProfile> get availableModels => const [
         ChatModelProfile(
@@ -112,7 +119,10 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  Future<void> send(String text) {
+  Future<void> send(String text) async {
+    if (_isGenerating) {
+      return;
+    }
     final now = _clock();
     final userText = text.isEmpty ? 'Attached context' : text;
     final userMessage = ChatMessage(
@@ -122,18 +132,20 @@ class ChatController extends ChangeNotifier {
       attachments: _state.pendingAttachments,
       createdAt: now,
     );
+    final responseId = _id('message');
     final assistantMessage = ChatMessage(
-      id: _id('message'),
+      id: responseId,
       role: ChatMessageRole.assistant,
-      markdown: _draftResponder.reply(
-        modelId: _state.selectedModelId,
-        prompt: userText,
-      ),
-      createdAt: now.add(const Duration(milliseconds: 400)),
+      markdown: '',
+      createdAt: now,
     );
+    final requestMessages = [
+      ..._state.activeSession.messages,
+      userMessage,
+    ];
     _replaceActive((session) {
       final title = session.title == 'New session'
-          ? _draftResponder.titleFrom(userText)
+          ? _titleGenerator.fromText(userText)
           : session.title;
       return session.copyWith(
         title: title,
@@ -141,7 +153,69 @@ class ChatController extends ChangeNotifier {
         updatedAt: now,
       );
     });
-    return _save(_state.copyWith(pendingAttachments: const []));
+    _state = _state.copyWith(pendingAttachments: const []);
+    _isGenerating = true;
+    notifyListeners();
+
+    var receivedContent = false;
+    try {
+      await _repository.save(_state);
+      final request = ChatGenerationRequest(
+        modelId: _state.selectedModelId,
+        messages: requestMessages,
+        streamResponse: true,
+      );
+      await for (final event in _runtime.generate(request)) {
+        switch (event) {
+          case ChatGenerationChunk():
+            if (event.text.isEmpty) {
+              continue;
+            }
+            receivedContent = true;
+            _updateMessage(
+              responseId,
+              (message) => message.copyWith(
+                markdown: '${message.markdown}${event.text}',
+              ),
+            );
+            notifyListeners();
+          case ChatGenerationFailed():
+            _updateMessage(
+              responseId,
+              (message) => message.copyWith(
+                markdown: _failureMarkdown(message.markdown, event),
+              ),
+            );
+            notifyListeners();
+            return;
+          case ChatGenerationDone():
+            if (!receivedContent) {
+              _updateMessage(
+                responseId,
+                (message) => message.copyWith(
+                  markdown:
+                      '**Empty response**\n\nThe provider returned no text.',
+                ),
+              );
+              notifyListeners();
+            }
+            return;
+        }
+      }
+      if (!receivedContent) {
+        _updateMessage(
+          responseId,
+          (message) => message.copyWith(
+            markdown: '**Empty response**\n\nThe provider returned no text.',
+          ),
+        );
+        notifyListeners();
+      }
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
+      await _repository.save(_state);
+    }
   }
 
   void _replaceActive(ChatSession Function(ChatSession session) update) {
@@ -154,6 +228,31 @@ class ChatController extends ChangeNotifier {
             session,
       ],
     );
+  }
+
+  void _updateMessage(
+    String messageId,
+    ChatMessage Function(ChatMessage message) update,
+  ) {
+    _replaceActive(
+      (session) => session.copyWith(
+        messages: [
+          for (final message in session.messages)
+            if (message.id == messageId) update(message) else message,
+        ],
+        updatedAt: _clock(),
+      ),
+    );
+  }
+
+  String _failureMarkdown(
+    String partialResponse,
+    ChatGenerationFailed failure,
+  ) {
+    final heading = partialResponse.isEmpty
+        ? '**Request failed**'
+        : '$partialResponse\n\n**Response interrupted**';
+    return '$heading\n\n${failure.message}\n\n`${failure.code}`';
   }
 
   Future<void> _save(ChatState state) async {

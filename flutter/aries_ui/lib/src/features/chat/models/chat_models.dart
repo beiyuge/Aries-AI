@@ -30,6 +30,16 @@ class ChatMessage {
   final String markdown;
   final DateTime createdAt;
   final List<ChatAttachment> attachments;
+
+  ChatMessage copyWith({String? markdown}) {
+    return ChatMessage(
+      id: id,
+      role: role,
+      markdown: markdown ?? this.markdown,
+      createdAt: createdAt,
+      attachments: attachments,
+    );
+  }
 }
 
 class ChatSession {

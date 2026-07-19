@@ -35,3 +35,15 @@ abstract class CapabilityHostApi {
   String runCapabilitySelfTest(String id);
   void openCapabilitySettings(String id);
 }
+
+@HostApi()
+abstract class LocalModelHostApi {
+  @async
+  void loadLocalModel(String modelId, String path);
+
+  @async
+  String generateLocalModel(String modelId, String prompt);
+
+  @async
+  void unloadLocalModel(String modelId);
+}

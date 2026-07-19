@@ -18,6 +18,16 @@ class SettingsStateCodec implements JsonStateCodec<SettingsState> {
       'selectedProfileId': value.selectedProfileId,
       'streamResponses': value.streamResponses,
       'preferLocalModel': value.preferLocalModel,
+      'localModelPath': value.localModelPath,
+      'providerOverrides': [
+        for (final profile in value.profiles)
+          if (profile.editable)
+            {
+              'id': profile.id,
+              'baseUrl': profile.baseUrl,
+              'model': profile.model,
+            },
+      ],
     };
   }
 
@@ -30,13 +40,47 @@ class SettingsStateCodec implements JsonStateCodec<SettingsState> {
     )
         ? storedProfileId
         : _profiles.first.id;
+    final overrides = value['providerOverrides'] == null
+        ? const <Object?>[]
+        : JsonValue.list(value['providerOverrides'], 'providerOverrides');
+    final profiles = [
+      for (final profile in _profiles) _applyOverride(profile, overrides),
+    ];
     return SettingsState(
       selectedProfileId: selectedProfileId,
       streamResponses:
           JsonValue.boolean(value['streamResponses'], 'streamResponses'),
       preferLocalModel:
           JsonValue.boolean(value['preferLocalModel'], 'preferLocalModel'),
-      profiles: _profiles,
+      localModelPath: value['localModelPath'] == null
+          ? ''
+          : JsonValue.string(value['localModelPath'], 'localModelPath'),
+      profiles: profiles,
     );
+  }
+
+  ProviderProfile _applyOverride(
+    ProviderProfile profile,
+    List<Object?> overrides,
+  ) {
+    if (!profile.editable) {
+      return profile;
+    }
+    for (final item in overrides) {
+      final override = JsonValue.map(item, 'providerOverride');
+      if (override['id'] == profile.id) {
+        return profile.copyWith(
+          baseUrl: JsonValue.string(
+            override['baseUrl'],
+            'providerOverride.baseUrl',
+          ),
+          model: JsonValue.string(
+            override['model'],
+            'providerOverride.model',
+          ),
+        );
+      }
+    }
+    return profile;
   }
 }

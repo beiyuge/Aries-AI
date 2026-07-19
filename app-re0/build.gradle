@@ -43,4 +43,7 @@ dependencies {
     implementation libs.androidx.appcompat
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.material
+    testImplementation project(':core:capability-test')
+    testImplementation libs.junit
+    testImplementation libs.kotlinx.coroutines.core
 }

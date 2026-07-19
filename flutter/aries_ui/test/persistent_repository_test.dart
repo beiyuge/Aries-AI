@@ -10,6 +10,8 @@ import 'package:aries_ui/src/infrastructure/persistence/string_store.dart';
 import 'package:aries_ui/src/infrastructure/settings/persistent_settings_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_chat_runtime.dart';
+
 void main() {
   DateTime clock() => DateTime.utc(2026, 6, 29, 12);
 
@@ -18,6 +20,7 @@ void main() {
     final store = InMemoryStringStore();
     final controller = ChatController(
       repository: PersistentChatRepository(store: store, clock: clock),
+      runtime: FakeChatRuntime.text('Persisted response'),
       clock: clock,
     );
 
@@ -51,16 +54,26 @@ void main() {
       repository: PersistentSettingsRepository(store: store),
     );
 
-    await controller.selectProfile('local');
+    await controller.selectProfile('staging');
+    expect(
+      await controller.updateSelectedProviderConfiguration(
+        baseUrl: 'https://custom.example/v1/',
+        model: 'custom-model',
+      ),
+      isNull,
+    );
     await controller.setStreamResponses(false);
-    await controller.setPreferLocalModel(true);
+    await controller.setLocalModelPath('/models/local.gguf');
 
     final restored = SettingsController(
       repository: PersistentSettingsRepository(store: store),
     );
-    expect(restored.selectedProfileId, 'local');
+    expect(restored.selectedProfileId, 'staging');
     expect(restored.streamResponses, isFalse);
-    expect(restored.preferLocalModel, isTrue);
+    expect(restored.preferLocalModel, isFalse);
+    expect(restored.localModelPath, '/models/local.gguf');
+    expect(restored.selectedProfile.baseUrl, 'https://custom.example/v1');
+    expect(restored.selectedProfile.model, 'custom-model');
     expect(restored.profiles.map((profile) => profile.id),
         containsAll(['default', 'local', 'staging']));
   });

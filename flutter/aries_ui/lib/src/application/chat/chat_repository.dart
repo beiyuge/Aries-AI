@@ -84,30 +84,9 @@ class InMemoryChatRepository implements ChatRepository {
     return ChatState(
       sessions: [session],
       activeSessionId: session.id,
-      selectedModelId: 'local.wrapper',
+      selectedModelId: 'remote.primary',
       pendingAttachments: const [],
       nextId: 0,
     );
-  }
-}
-
-class ChatDraftResponder {
-  const ChatDraftResponder();
-
-  String reply({required String modelId, required String prompt}) {
-    return '# Draft\n'
-        '- Model: $modelId\n'
-        '- Intent: ${titleFrom(prompt)}\n'
-        '- Next: inspect Diagnostics before device actions';
-  }
-
-  String titleFrom(String text) {
-    final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (normalized.isEmpty) {
-      return 'Attached context';
-    }
-    return normalized.length <= 28
-        ? normalized
-        : '${normalized.substring(0, 28)}...';
   }
 }

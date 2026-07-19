@@ -1,4 +1,7 @@
 import 'package:aries_ui/src/app.dart';
+import 'package:aries_ui/src/application/application_repositories.dart';
+import 'package:aries_ui/src/application/chat/local_model_gateway.dart';
+import 'package:aries_ui/src/application/settings/local_model_file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -70,4 +73,72 @@ void main() {
     expect(find.textContaining('notes.txt'), findsOneWidget);
     expect(find.textContaining('2 KB'), findsOneWidget);
   });
+
+  testWidgets('settings loads and restores a selected local model',
+      (tester) async {
+    final repositories = ApplicationRepositories.inMemory();
+    final gateway = _FakeLocalModelGateway();
+    final picker = _FakeLocalModelFilePicker();
+    await tester.pumpWidget(
+      AriesRe0App(
+        repositories: repositories,
+        localModels: gateway,
+        localModelFilePicker: picker,
+      ),
+    );
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Local'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose model'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('model.gguf'), findsOneWidget);
+    expect(gateway.loads.single, ('local.default', '/models/model.gguf'));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      AriesRe0App(
+        repositories: repositories,
+        localModels: gateway,
+        localModelFilePicker: picker,
+      ),
+    );
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('model.gguf'), findsOneWidget);
+    expect(gateway.loads, hasLength(2));
+  });
+}
+
+class _FakeLocalModelGateway implements LocalModelGateway {
+  final List<(String, String)> loads = [];
+
+  @override
+  Future<String> generate({
+    required String modelId,
+    required String prompt,
+  }) async =>
+      'local';
+
+  @override
+  Future<void> load({required String modelId, required String path}) async {
+    loads.add((modelId, path));
+  }
+
+  @override
+  Future<void> unload(String modelId) async {}
+}
+
+class _FakeLocalModelFilePicker implements LocalModelFilePicker {
+  @override
+  Future<PickedLocalModelFile?> pick() async {
+    return const PickedLocalModelFile(
+      name: 'model.gguf',
+      path: '/models/model.gguf',
+      byteLength: 4096,
+    );
+  }
 }

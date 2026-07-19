@@ -17,6 +17,8 @@ dependencies:
   file_selector: ^1.1.0
   # 0.5.2+5 uses the same unresolved Kotlin DSL Flutter accessor as the host.
   file_selector_android: 0.5.2+4
+  flutter_secure_storage: ^10.3.1
+  http: ^1.6.0
   mime: ^2.0.0
   shared_preferences: ^2.5.5
   # 2.4.22+ uses a Kotlin DSL accessor that is not resolved by this add-to-app host.
