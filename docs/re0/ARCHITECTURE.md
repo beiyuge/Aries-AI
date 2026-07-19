@@ -61,6 +61,10 @@ Local Chat uses `LocalModelGateway` and `LocalModelChatRuntime`. Pigeon generate
 
 Automation uses a shared `AutomationPlanner` to turn the first command vocabulary into platform-neutral command objects. `DefaultAutomationRuntime` routes those commands through `AutomationGateway`; the production Pigeon adapter calls `AutomationHostApi`, and the Android host resolves UI tree, screen capture, and input capabilities from `AndroidCapabilityRegistry`. Native JSON and image bytes stay typed bridge payloads, while task state records typed errors without embedding Android assumptions in Flutter.
 
+Screen capture consent is a host lifecycle concern, exposed as typed start/stop operations rather than an Android intent in Flutter. `AndroidScreenCaptureSessionControl` launches the system consent contract, `ScreenCaptureForegroundService` owns the media-projection foreground-service requirement, and `MediaProjectionScreenCaptureSession` owns projection, virtual display, image reader, frame conversion, and deterministic cleanup. The capability delegates to this process-scoped session and reports its live health.
+
+Automation results become platform-neutral artifacts. Image bytes are available to the active task for immediate preview but are not serialized into preferences; persisted task history stores MIME type, byte length, summary, and bounded text previews. This avoids multi-megabyte preference entries while preserving useful history after restart.
+
 ## Rules
 
 1. Flutter does not call platform system APIs directly.
@@ -75,3 +79,4 @@ Automation uses a shared `AutomationPlanner` to turn the first command vocabular
 10. Cross-platform device services such as file selection are injected behind application contracts; feature controllers do not import Flutter plugin packages.
 11. Provider credentials are stored separately from ordinary settings and must not be forwarded across redirects.
 12. Chat controllers consume `ChatRuntime`; provider and local-model protocol details remain infrastructure adapters.
+13. Large binary automation artifacts remain session-local unless a dedicated artifact store is introduced; preference codecs persist metadata only.

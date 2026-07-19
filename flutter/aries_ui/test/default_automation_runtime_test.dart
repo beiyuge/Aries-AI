@@ -10,6 +10,8 @@ void main() {
     final runtime = DefaultAutomationRuntime(gateway: gateway);
 
     await runtime.execute(const CheckReadinessCommand());
+    await runtime.execute(const StartScreenCaptureCommand());
+    await runtime.execute(const StopScreenCaptureCommand());
     await runtime.execute(const DumpUiTreeCommand(detail: 'full'));
     await runtime.execute(const CaptureScreenCommand());
     await runtime.execute(const TapCommand(x: 12, y: 34));
@@ -27,6 +29,8 @@ void main() {
 
     expect(gateway.calls, [
       'readiness',
+      'capture-consent',
+      'capture-stop',
       'tree:full',
       'capture',
       'tap:12,34',
@@ -65,6 +69,16 @@ class _FakeAutomationGateway implements AutomationGateway {
   @override
   Future<AutomationExecutionResult> checkReadiness() async {
     return _record('readiness');
+  }
+
+  @override
+  Future<AutomationExecutionResult> requestScreenCaptureConsent() async {
+    return _record('capture-consent');
+  }
+
+  @override
+  Future<AutomationExecutionResult> stopScreenCaptureSession() async {
+    return _record('capture-stop');
   }
 
   @override

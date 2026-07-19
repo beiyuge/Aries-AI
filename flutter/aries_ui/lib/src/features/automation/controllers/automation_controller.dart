@@ -66,16 +66,23 @@ class AutomationController extends ChangeNotifier {
 
     await _update(
       taskId,
-      (latest) => latest.copyWith(
-        status: result.success
-            ? AutomationTaskStatus.completed
-            : AutomationTaskStatus.failed,
-        steps: [
-          ...latest.steps,
-          result.summary,
-          if (result.errorCode case final errorCode?) 'Error: $errorCode',
-        ],
-      ),
+      (latest) {
+        final artifact = _artifactFrom(result, latest);
+        return latest.copyWith(
+          status: result.success
+              ? AutomationTaskStatus.completed
+              : AutomationTaskStatus.failed,
+          steps: [
+            ...latest.steps,
+            result.summary,
+            if (result.errorCode case final errorCode?) 'Error: $errorCode',
+          ],
+          artifacts: [
+            ...latest.artifacts,
+            if (artifact != null) artifact,
+          ],
+        );
+      },
     );
   }
 
@@ -101,6 +108,40 @@ class AutomationController extends ChangeNotifier {
     return null;
   }
 
+  AutomationArtifact? _artifactFrom(
+    AutomationExecutionResult result,
+    AutomationTask task,
+  ) {
+    final bytes = result.bytes;
+    final text = result.text;
+    if (bytes == null && (text == null || text.isEmpty)) {
+      return null;
+    }
+    final mimeType = result.mimeType ??
+        (bytes == null ? 'text/plain' : 'application/octet-stream');
+    final kind = mimeType.startsWith('image/')
+        ? AutomationArtifactKind.image
+        : mimeType.startsWith('text/') || mimeType.contains('json')
+            ? AutomationArtifactKind.text
+            : AutomationArtifactKind.binary;
+    return AutomationArtifact(
+      id: '${task.id}-artifact-${task.artifacts.length + 1}',
+      kind: kind,
+      mimeType: mimeType,
+      summary: result.summary,
+      byteLength: bytes?.length ?? text!.length,
+      textPreview: text == null ? null : _truncatePreview(text),
+      bytes: bytes,
+    );
+  }
+
+  String _truncatePreview(String value) {
+    if (value.length <= _maxTextPreviewCharacters) {
+      return value;
+    }
+    return '${value.substring(0, _maxTextPreviewCharacters)}\n...';
+  }
+
   Future<void> _update(
     String taskId,
     AutomationTask Function(AutomationTask task) update,
@@ -120,4 +161,6 @@ class AutomationController extends ChangeNotifier {
     notifyListeners();
     await _repository.save(state);
   }
+
+  static const _maxTextPreviewCharacters = 4096;
 }

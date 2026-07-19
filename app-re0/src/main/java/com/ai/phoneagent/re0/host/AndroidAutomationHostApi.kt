@@ -28,6 +28,8 @@ class AndroidAutomationHostApi(
     private val registry: AndroidCapabilityRegistry,
     private val scope: CoroutineScope,
     private val workerDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val screenCaptureSessionControl: ScreenCaptureSessionControl =
+        UnavailableScreenCaptureSessionControl,
 ) : AutomationHostApi {
     override fun checkReadiness(callback: (Result<AutomationResultDto>) -> Unit) {
         launchResult(callback) {
@@ -43,6 +45,14 @@ class AndroidAutomationHostApi(
                 mimeType = "text/plain",
             )
         }
+    }
+
+    override fun requestScreenCaptureConsent(callback: (Result<AutomationResultDto>) -> Unit) {
+        screenCaptureSessionControl.requestConsent(callback)
+    }
+
+    override fun stopScreenCaptureSession(callback: (Result<AutomationResultDto>) -> Unit) {
+        callback.success(screenCaptureSessionControl.stopSession())
     }
 
     override fun dumpUiTree(

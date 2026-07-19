@@ -72,12 +72,58 @@ class AndroidAutomationHostApiTest {
         assertEquals("capability_not_registered", missingCapture.errorCode)
     }
 
+    @Test
+    fun `delegates screen capture session lifecycle to the activity control`() = runBlocking {
+        val control = FakeScreenCaptureSessionControl()
+        val host = AndroidAutomationHostApi(
+            registry = AndroidCapabilityRegistry(emptyList()),
+            scope = this,
+            workerDispatcher = Dispatchers.Unconfined,
+            screenCaptureSessionControl = control,
+        )
+
+        val started = awaitResult(host::requestScreenCaptureConsent)
+        val stopped = awaitResult(host::stopScreenCaptureSession)
+
+        assertEquals("consent ready", started.summary)
+        assertEquals("session stopped", stopped.summary)
+        assertEquals(1, control.requestCount)
+        assertEquals(1, control.stopCount)
+    }
+
     private suspend fun awaitResult(
         block: ((Result<AutomationResultDto>) -> Unit) -> Unit,
     ): AutomationResultDto {
         val result = CompletableDeferred<Result<AutomationResultDto>>()
         block(result::complete)
         return result.await().getOrThrow()
+    }
+}
+
+private class FakeScreenCaptureSessionControl : ScreenCaptureSessionControl {
+    var requestCount = 0
+    var stopCount = 0
+
+    override fun requestConsent(callback: (Result<AutomationResultDto>) -> Unit) {
+        requestCount += 1
+        callback(
+            Result.success(
+                AutomationResultDto(
+                    success = true,
+                    summary = "consent ready",
+                    recoverable = false,
+                ),
+            ),
+        )
+    }
+
+    override fun stopSession(): AutomationResultDto {
+        stopCount += 1
+        return AutomationResultDto(
+            success = true,
+            summary = "session stopped",
+            recoverable = false,
+        )
     }
 }
 

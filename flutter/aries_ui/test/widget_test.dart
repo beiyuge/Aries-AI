@@ -2,6 +2,8 @@ import 'package:aries_ui/src/app.dart';
 import 'package:aries_ui/src/application/application_repositories.dart';
 import 'package:aries_ui/src/application/chat/local_model_gateway.dart';
 import 'package:aries_ui/src/application/settings/local_model_file_picker.dart';
+import 'package:aries_ui/src/features/automation/models/automation_models.dart';
+import 'package:aries_ui/src/features/automation/widgets/automation_task_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -37,6 +39,36 @@ void main() {
     await tester.pump();
 
     expect(find.text('Completed'), findsWidgets);
+  });
+
+  testWidgets('automation result steps stay within a narrow task card',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 280,
+            child: AutomationTaskCard(
+              task: AutomationTask(
+                id: 'capture-1',
+                title: 'capture',
+                status: AutomationTaskStatus.completed,
+                steps: [
+                  'Captured 1280x2856 from android-media-projection',
+                ],
+              ),
+              onRun: _noOp,
+              onCancel: _noOp,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final cardWidth = tester.getSize(find.byType(Card)).width;
+    final chipWidth = tester.getSize(find.byType(Chip)).width;
+    expect(chipWidth, lessThanOrEqualTo(cardWidth));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('settings switches provider profile', (tester) async {
@@ -117,6 +149,8 @@ void main() {
     expect(gateway.loads, hasLength(2));
   });
 }
+
+void _noOp() {}
 
 class _FakeLocalModelGateway implements LocalModelGateway {
   final List<(String, String)> loads = [];

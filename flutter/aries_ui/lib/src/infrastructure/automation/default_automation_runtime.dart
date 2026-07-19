@@ -11,6 +11,8 @@ class DefaultAutomationRuntime implements AutomationRuntime {
   Future<AutomationExecutionResult> execute(AutomationCommand command) {
     return switch (command) {
       CheckReadinessCommand() => gateway.checkReadiness(),
+      StartScreenCaptureCommand() => gateway.requestScreenCaptureConsent(),
+      StopScreenCaptureCommand() => gateway.stopScreenCaptureSession(),
       DumpUiTreeCommand() => gateway.dumpUiTree(command.detail),
       CaptureScreenCommand() => gateway.captureScreen(),
       TapCommand() => gateway.tap(command.x, command.y),

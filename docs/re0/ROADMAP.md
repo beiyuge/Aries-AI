@@ -21,7 +21,7 @@
 - screen capture / UI tree
 - input injection
 
-The first shared Automation command vocabulary now executes these registered capabilities and records native results. Multi-step planning, retries, artifact presentation, and agent-driven orchestration remain in progress.
+The first shared Automation command vocabulary now executes these registered capabilities and records native results. Android MediaProjection consent, foreground session lifecycle, PNG/JPEG capture, explicit stop, and screenshot/UI-tree artifact presentation are complete. Multi-step planning, retries, dedicated artifact storage, and agent-driven orchestration remain in progress.
 
 ## Milestone D: Complex Android capabilities
 

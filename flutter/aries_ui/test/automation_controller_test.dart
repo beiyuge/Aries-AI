@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:aries_ui/src/application/automation/automation_command.dart';
 import 'package:aries_ui/src/application/automation/automation_repository.dart';
@@ -43,6 +44,28 @@ void main() {
       controller.tasks.first.steps,
       contains('Error: screen_capture.media_projection_required'),
     );
+  });
+
+  test('retains native artifacts on the completed task', () async {
+    final runtime = FakeAutomationRuntime(
+      AutomationExecutionResult(
+        success: true,
+        summary: 'Captured 1080x2400',
+        recoverable: false,
+        bytes: Uint8List.fromList([1, 2, 3]),
+        mimeType: 'image/png',
+      ),
+    );
+    final controller = AutomationController(runtime: runtime);
+
+    await controller.enqueue('capture screen');
+    await controller.run(controller.tasks.first.id);
+
+    final artifact = controller.tasks.first.artifacts.single;
+    expect(artifact.kind, AutomationArtifactKind.image);
+    expect(artifact.mimeType, 'image/png');
+    expect(artifact.byteLength, 3);
+    expect(artifact.bytes, orderedEquals([1, 2, 3]));
   });
 
   test('a cancelled task is not overwritten by a late native result', () async {

@@ -3,6 +3,10 @@ import 'automation_runtime.dart';
 abstract interface class AutomationGateway {
   Future<AutomationExecutionResult> checkReadiness();
 
+  Future<AutomationExecutionResult> requestScreenCaptureConsent();
+
+  Future<AutomationExecutionResult> stopScreenCaptureSession();
+
   Future<AutomationExecutionResult> dumpUiTree(String detail);
 
   Future<AutomationExecutionResult> captureScreen();

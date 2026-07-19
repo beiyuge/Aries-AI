@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/automation_models.dart';
+import 'automation_artifact_view.dart';
 
 class AutomationTaskCard extends StatelessWidget {
   const AutomationTaskCard({
@@ -43,23 +44,37 @@ class AutomationTaskCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final step in task.steps) Chip(label: Text(step)),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) => Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final step in task.steps)
+                    ConstrainedBox(
+                      constraints:
+                          BoxConstraints(maxWidth: constraints.maxWidth),
+                      child: Chip(
+                        label: Text(step, softWrap: true),
+                      ),
+                    ),
+                ],
+              ),
             ),
+            for (final artifact in task.artifacts) ...[
+              const SizedBox(height: 12),
+              AutomationArtifactView(artifact: artifact),
+            ],
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 TextButton.icon(
                   onPressed: canCancel ? onCancel : null,
                   icon: const Icon(Icons.cancel_outlined),
                   label: const Text('Cancel'),
                 ),
-                const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: canRun ? onRun : null,
                   icon: const Icon(Icons.play_arrow_outlined),

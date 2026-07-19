@@ -16,6 +16,16 @@ class PigeonAutomationGateway implements AutomationGateway {
   }
 
   @override
+  Future<AutomationExecutionResult> requestScreenCaptureConsent() {
+    return _invoke(_hostApi.requestScreenCaptureConsent);
+  }
+
+  @override
+  Future<AutomationExecutionResult> stopScreenCaptureSession() {
+    return _invoke(_hostApi.stopScreenCaptureSession);
+  }
+
+  @override
   Future<AutomationExecutionResult> dumpUiTree(String detail) {
     return _invoke(() => _hostApi.dumpUiTree(detail));
   }

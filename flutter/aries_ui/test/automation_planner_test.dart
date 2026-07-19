@@ -15,6 +15,17 @@ void main() {
     expect(planner.plan('capture screen').command, isA<CaptureScreenCommand>());
   });
 
+  test('plans screen session lifecycle before generic capture matching', () {
+    expect(
+      planner.plan('start screen capture').command,
+      isA<StartScreenCaptureCommand>(),
+    );
+    expect(
+      planner.plan('stop screen capture').command,
+      isA<StopScreenCaptureCommand>(),
+    );
+  });
+
   test('plans input commands with typed arguments', () {
     final tap = planner.plan('tap 12, 34').command as TapCommand;
     final swipe = planner.plan('swipe 1 2 3 4 450').command as SwipeCommand;

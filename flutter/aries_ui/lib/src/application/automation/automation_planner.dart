@@ -24,6 +24,22 @@ class AutomationPlanner {
         steps: const ['Read native health', 'Summarize readiness'],
       );
     }
+    if (lower.contains('stop screen capture') ||
+        lower.contains('disable screen capture')) {
+      return AutomationPlan(
+        command: const StopScreenCaptureCommand(),
+        steps: const ['Stop capture session', 'Release native resources'],
+      );
+    }
+    if (lower.contains('screen consent') ||
+        lower.contains('start screen capture') ||
+        lower.contains('enable screen capture') ||
+        lower.contains('grant screen capture')) {
+      return AutomationPlan(
+        command: const StartScreenCaptureCommand(),
+        steps: const ['Request screen consent', 'Start capture session'],
+      );
+    }
     if (lower.contains('ui tree') || lower.contains('dump tree')) {
       final detail = lower.contains('full')
           ? 'full'

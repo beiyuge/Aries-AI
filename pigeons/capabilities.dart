@@ -79,6 +79,12 @@ abstract class AutomationHostApi {
   AutomationResultDto checkReadiness();
 
   @async
+  AutomationResultDto requestScreenCaptureConsent();
+
+  @async
+  AutomationResultDto stopScreenCaptureSession();
+
+  @async
   AutomationResultDto dumpUiTree(String detail);
 
   @async

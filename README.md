@@ -29,6 +29,7 @@ Flutter app
 - Chat now uses a real OpenAI-compatible streaming runtime. Provider endpoints/models are configurable, redirects are rejected, API keys live in platform secure storage, and native file paths are excluded from provider requests.
 - Local model load/generate/unload is exposed through the same Pigeon schema. Settings can select and restore a model file, while Chat receives platform errors through shared typed events.
 - Automation commands now flow through a shared planner/runtime/gateway into `AutomationHostApi`. Readiness, UI tree, screen capture, tap, swipe, text, and key operations dispatch to the registered native capabilities with typed success/failure results; Flutter never calls Android APIs directly.
+- Android screen capture now has a real MediaProjection consent flow, foreground-service-backed session lifecycle, frame encoding, and explicit stop command. Screenshot and UI-tree results appear as typed task artifacts; image bytes remain in memory while durable state stores only safe metadata and text previews.
 - Attachment content/multimodal adapters, a production local inference engine, speech UI, multi-step agent orchestration, richer Markdown, and real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 

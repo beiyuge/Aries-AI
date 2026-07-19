@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:aries_ui/src/application/automation/automation_runtime.dart';
 import 'package:aries_ui/src/application/chat/chat_attachment_picker.dart';
 import 'package:aries_ui/src/features/automation/controllers/automation_controller.dart';
 import 'package:aries_ui/src/features/automation/models/automation_models.dart';
@@ -84,7 +87,15 @@ void main() {
     final store = InMemoryStringStore();
     final controller = AutomationController(
       repository: PersistentAutomationRepository(store: store),
-      runtime: FakeAutomationRuntime.success('Captured 1080x2400'),
+      runtime: FakeAutomationRuntime(
+        AutomationExecutionResult(
+          success: true,
+          summary: 'Captured 1080x2400',
+          recoverable: false,
+          bytes: Uint8List.fromList([1, 2, 3]),
+          mimeType: 'image/png',
+        ),
+      ),
     );
 
     await controller.enqueue('capture screen');
@@ -94,6 +105,9 @@ void main() {
       repository: PersistentAutomationRepository(store: store),
     );
     expect(restored.tasks.first.status, AutomationTaskStatus.completed);
+    expect(restored.tasks.first.artifacts.single.mimeType, 'image/png');
+    expect(restored.tasks.first.artifacts.single.byteLength, 3);
+    expect(restored.tasks.first.artifacts.single.bytes, isNull);
     expect(restored.capabilities, isNotEmpty);
   });
 

@@ -6,6 +6,14 @@ class CheckReadinessCommand extends AutomationCommand {
   const CheckReadinessCommand();
 }
 
+class StartScreenCaptureCommand extends AutomationCommand {
+  const StartScreenCaptureCommand();
+}
+
+class StopScreenCaptureCommand extends AutomationCommand {
+  const StopScreenCaptureCommand();
+}
+
 class DumpUiTreeCommand extends AutomationCommand {
   const DumpUiTreeCommand({this.detail = 'summary'});
 

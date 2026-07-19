@@ -37,6 +37,7 @@ class AutomationStateCodec implements JsonStateCodec<AutomationState> {
       'title': task.title,
       'status': task.status.name,
       'steps': task.steps,
+      'artifacts': task.artifacts.map(_encodeArtifact).toList(),
     };
   }
 
@@ -57,6 +58,49 @@ class AutomationStateCodec implements JsonStateCodec<AutomationState> {
       steps: JsonValue.list(value['steps'], 'task.steps')
           .map((step) => JsonValue.string(step, 'task.step'))
           .toList(),
+      artifacts: value['artifacts'] == null
+          ? const []
+          : JsonValue.list(value['artifacts'], 'task.artifacts')
+              .map((item) => _decodeArtifact(JsonValue.map(item, 'artifact')))
+              .toList(),
+    );
+  }
+
+  Map<String, Object?> _encodeArtifact(AutomationArtifact artifact) {
+    return {
+      'id': artifact.id,
+      'kind': artifact.kind.name,
+      'mimeType': artifact.mimeType,
+      'summary': artifact.summary,
+      'byteLength': artifact.byteLength,
+      'textPreview': artifact.textPreview,
+    };
+  }
+
+  AutomationArtifact _decodeArtifact(Map<String, Object?> value) {
+    final kindName = JsonValue.string(value['kind'], 'artifact.kind');
+    final kind = switch (kindName) {
+      'image' => AutomationArtifactKind.image,
+      'text' => AutomationArtifactKind.text,
+      'binary' => AutomationArtifactKind.binary,
+      _ => throw FormatException('Unknown artifact kind: $kindName'),
+    };
+    final byteLength = JsonValue.integer(
+      value['byteLength'],
+      'artifact.byteLength',
+    );
+    if (byteLength < 0) {
+      throw const FormatException('artifact.byteLength must be non-negative');
+    }
+    return AutomationArtifact(
+      id: JsonValue.string(value['id'], 'artifact.id'),
+      kind: kind,
+      mimeType: JsonValue.string(value['mimeType'], 'artifact.mimeType'),
+      summary: JsonValue.string(value['summary'], 'artifact.summary'),
+      byteLength: byteLength,
+      textPreview: value['textPreview'] == null
+          ? null
+          : JsonValue.string(value['textPreview'], 'artifact.textPreview'),
     );
   }
 }

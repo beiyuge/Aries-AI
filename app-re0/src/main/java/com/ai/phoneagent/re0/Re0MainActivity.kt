@@ -1,6 +1,6 @@
 package com.ai.phoneagent.re0
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import com.ai.phoneagent.core.capability.CapabilityIds
 import com.ai.phoneagent.re0.generated.CapabilityHostApi
@@ -9,16 +9,18 @@ import com.ai.phoneagent.re0.generated.LocalModelHostApi
 import com.ai.phoneagent.re0.host.AndroidCapabilityHostApi
 import com.ai.phoneagent.re0.host.AndroidAutomationHostApi
 import com.ai.phoneagent.re0.host.AndroidLocalModelHostApi
+import com.ai.phoneagent.re0.host.AndroidScreenCaptureSessionControl
 import com.ai.phoneagent.re0.host.Re0CapabilityGraph
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 
-class Re0MainActivity : FlutterActivity() {
+class Re0MainActivity : FlutterFragmentActivity() {
     private val capabilityRegistry by lazy {
         Re0CapabilityGraph.createRegistry(this)
     }
+    private val screenCaptureSessionControl = AndroidScreenCaptureSessionControl(this)
     private var hostScope: CoroutineScope? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -45,6 +47,7 @@ class Re0MainActivity : FlutterActivity() {
             AndroidAutomationHostApi(
                 registry = capabilityRegistry,
                 scope = scope,
+                screenCaptureSessionControl = screenCaptureSessionControl,
             ),
         )
     }
@@ -56,5 +59,10 @@ class Re0MainActivity : FlutterActivity() {
         hostScope?.cancel()
         hostScope = null
         super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    override fun onDestroy() {
+        screenCaptureSessionControl.close()
+        super.onDestroy()
     }
 }

@@ -322,6 +322,8 @@ interface LocalModelHostApi {
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface AutomationHostApi {
   fun checkReadiness(callback: (Result<AutomationResultDto>) -> Unit)
+  fun requestScreenCaptureConsent(callback: (Result<AutomationResultDto>) -> Unit)
+  fun stopScreenCaptureSession(callback: (Result<AutomationResultDto>) -> Unit)
   fun dumpUiTree(detail: String, callback: (Result<AutomationResultDto>) -> Unit)
   fun captureScreen(callback: (Result<AutomationResultDto>) -> Unit)
   fun tap(x: Long, y: Long, callback: (Result<AutomationResultDto>) -> Unit)
@@ -343,6 +345,42 @@ interface AutomationHostApi {
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             api.checkReadiness{ result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.requestScreenCaptureConsent$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.requestScreenCaptureConsent{ result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.stopScreenCaptureSession$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.stopScreenCaptureSession{ result: Result<AutomationResultDto> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(wrapError(error))
