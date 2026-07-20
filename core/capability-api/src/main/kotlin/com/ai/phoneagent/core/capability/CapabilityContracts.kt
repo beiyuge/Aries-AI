@@ -32,6 +32,7 @@ interface InputInjectionCapability : Capability {
 interface VirtualDisplayCapability : Capability {
     val state: StateFlow<VirtualDisplayState>
     suspend fun start(request: VirtualDisplayStartRequest): VirtualDisplayResult
+    suspend fun launch(sessionId: String, request: VirtualDisplayLaunchRequest): CapabilityResult<Unit>
     suspend fun stop(sessionId: String): CapabilityResult<Unit>
     suspend fun capture(sessionId: String, request: CaptureRequest): CaptureResult
 }

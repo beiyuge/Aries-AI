@@ -40,6 +40,50 @@ class AutomationPlanner {
         steps: const ['Request screen consent', 'Start capture session'],
       );
     }
+    if (lower.contains('stop virtual display') ||
+        lower.contains('disable virtual display')) {
+      return AutomationPlan(
+        command: const StopVirtualDisplayCommand(),
+        steps: const ['Stop virtual display', 'Release frame resources'],
+      );
+    }
+    if (lower.contains('capture virtual display') ||
+        lower.contains('screenshot virtual display')) {
+      return AutomationPlan(
+        command: const CaptureVirtualDisplayCommand(),
+        steps: const ['Wait for visible frame', 'Reject near-black output'],
+      );
+    }
+    final virtualLaunch = RegExp(
+      r'^launch\s+([a-z0-9_.]+)(?:\s+on\s+virtual\s+display)?$',
+      caseSensitive: false,
+    ).firstMatch(normalized);
+    if (virtualLaunch != null) {
+      return AutomationPlan(
+        command: LaunchOnVirtualDisplayCommand(virtualLaunch.group(1)!),
+        steps: const ['Resolve active display', 'Launch application content'],
+      );
+    }
+    if (lower.contains('start virtual display') ||
+        lower.contains('create virtual display') ||
+        lower.contains('enable virtual display')) {
+      final dimensions = RegExp(
+        r'(\d+)\s*x\s*(\d+)',
+        caseSensitive: false,
+      ).firstMatch(normalized);
+      final density = RegExp(
+        r'dpi\s*[=:]?\s*(\d+)',
+        caseSensitive: false,
+      ).firstMatch(normalized);
+      return AutomationPlan(
+        command: StartVirtualDisplayCommand(
+          width: int.tryParse(dimensions?.group(1) ?? '') ?? 720,
+          height: int.tryParse(dimensions?.group(2) ?? '') ?? 1280,
+          densityDpi: int.tryParse(density?.group(1) ?? '') ?? 320,
+        ),
+        steps: const ['Create isolated display', 'Start frame monitoring'],
+      );
+    }
     if (lower.contains('ui tree') || lower.contains('dump tree')) {
       final detail = lower.contains('full')
           ? 'full'

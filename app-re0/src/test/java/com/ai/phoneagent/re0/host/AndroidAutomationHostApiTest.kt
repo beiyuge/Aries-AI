@@ -2,6 +2,7 @@ package com.ai.phoneagent.re0.host
 
 import com.ai.phoneagent.core.capability.CapabilityHealth
 import com.ai.phoneagent.core.capability.CapabilityIds
+import com.ai.phoneagent.core.capability.CapabilityResult
 import com.ai.phoneagent.core.capability.CaptureRequest
 import com.ai.phoneagent.core.capability.CaptureResult
 import com.ai.phoneagent.core.capability.InputInjectionCapability
@@ -15,6 +16,12 @@ import com.ai.phoneagent.core.capability.UiTreeCapability
 import com.ai.phoneagent.core.capability.UiTreeDetail
 import com.ai.phoneagent.core.capability.UiTreeDumpRequest
 import com.ai.phoneagent.core.capability.UiTreeDumpResult
+import com.ai.phoneagent.core.capability.VirtualDisplayCapability
+import com.ai.phoneagent.core.capability.VirtualDisplayLaunchRequest
+import com.ai.phoneagent.core.capability.VirtualDisplayLifecycle
+import com.ai.phoneagent.core.capability.VirtualDisplayResult
+import com.ai.phoneagent.core.capability.VirtualDisplayStartRequest
+import com.ai.phoneagent.core.capability.VirtualDisplayState
 import com.ai.phoneagent.platform.android.capability.AndroidCapabilityRegistry
 import com.ai.phoneagent.re0.generated.AutomationResultDto
 import kotlinx.coroutines.CompletableDeferred
@@ -89,6 +96,48 @@ class AndroidAutomationHostApiTest {
         assertEquals("session stopped", stopped.summary)
         assertEquals(1, control.requestCount)
         assertEquals(1, control.stopCount)
+    }
+
+    @Test
+    fun `dispatches the active virtual display lifecycle`() = runBlocking {
+        val virtualDisplay = FakeVirtualDisplayCapability()
+        val host = AndroidAutomationHostApi(
+            registry = AndroidCapabilityRegistry(listOf(virtualDisplay)),
+            scope = this,
+            workerDispatcher = Dispatchers.Unconfined,
+        )
+
+        val started = awaitResult { callback ->
+            host.startVirtualDisplay(720, 1280, 320, callback)
+        }
+        val launched = awaitResult { callback ->
+            host.launchOnVirtualDisplay("com.android.settings", callback)
+        }
+        val captured = awaitResult(host::captureVirtualDisplay)
+        val stopped = awaitResult(host::stopVirtualDisplay)
+
+        assertTrue(started.success)
+        assertEquals("sessionId=virtual-1\ndisplayId=42", started.text)
+        assertTrue(launched.success)
+        assertArrayEquals(byteArrayOf(7, 8, 9), captured.bytes)
+        assertEquals("image/png", captured.mimeType)
+        assertTrue(stopped.success)
+        assertEquals("com.android.settings", virtualDisplay.lastApplicationId)
+        assertEquals(VirtualDisplayLifecycle.Idle, virtualDisplay.state.value.lifecycle)
+    }
+
+    @Test
+    fun `virtual display operations require an active session`() = runBlocking {
+        val host = AndroidAutomationHostApi(
+            registry = AndroidCapabilityRegistry(listOf(FakeVirtualDisplayCapability())),
+            scope = this,
+            workerDispatcher = Dispatchers.Unconfined,
+        )
+
+        val result = awaitResult(host::captureVirtualDisplay)
+
+        assertFalse(result.success)
+        assertEquals("virtual_display.session_not_found", result.errorCode)
     }
 
     private suspend fun awaitResult(
@@ -171,4 +220,45 @@ private class FakeInputInjectionCapability : InputInjectionCapability {
     override suspend fun key(request: KeyRequest): InputResult = success()
 
     private fun success() = InputResult(backend = "fake-input", durationMs = 1)
+}
+
+private class FakeVirtualDisplayCapability : VirtualDisplayCapability {
+    override val id = CapabilityIds.VirtualDisplay
+    override val health = MutableStateFlow(CapabilityHealth.ready(id))
+    override val state = MutableStateFlow(
+        VirtualDisplayState(lifecycle = VirtualDisplayLifecycle.Idle),
+    )
+    var lastApplicationId: String? = null
+
+    override suspend fun start(request: VirtualDisplayStartRequest): VirtualDisplayResult {
+        state.value = VirtualDisplayState(
+            sessionId = "virtual-1",
+            lifecycle = VirtualDisplayLifecycle.Running,
+            displayId = 42,
+        )
+        return VirtualDisplayResult(sessionId = "virtual-1", displayId = 42)
+    }
+
+    override suspend fun launch(
+        sessionId: String,
+        request: VirtualDisplayLaunchRequest,
+    ): CapabilityResult<Unit> {
+        lastApplicationId = request.applicationId
+        return CapabilityResult.success(Unit)
+    }
+
+    override suspend fun stop(sessionId: String): CapabilityResult<Unit> {
+        state.value = VirtualDisplayState(lifecycle = VirtualDisplayLifecycle.Idle)
+        return CapabilityResult.success(Unit)
+    }
+
+    override suspend fun capture(
+        sessionId: String,
+        request: CaptureRequest,
+    ): CaptureResult = CaptureResult(
+        bytes = byteArrayOf(7, 8, 9),
+        width = 720,
+        height = 1280,
+        source = "fake-virtual-display",
+    )
 }

@@ -1,10 +1,12 @@
 package com.ai.phoneagent.re0.host
 
 import com.ai.phoneagent.core.capability.CapabilityError
+import com.ai.phoneagent.core.capability.CapabilityResult
 import com.ai.phoneagent.core.capability.CaptureFormat
 import com.ai.phoneagent.core.capability.CaptureResult
 import com.ai.phoneagent.core.capability.InputResult
 import com.ai.phoneagent.core.capability.UiTreeDumpResult
+import com.ai.phoneagent.core.capability.VirtualDisplayResult
 import com.ai.phoneagent.re0.generated.AutomationResultDto
 
 internal fun UiTreeDumpResult.toAutomationResult(): AutomationResultDto = error?.toAutomationResult()
@@ -32,6 +34,24 @@ internal fun InputResult.toAutomationResult(action: String): AutomationResultDto
     ?: AutomationResultDto(
         success = true,
         summary = "$action completed through $backend in ${durationMs}ms",
+        recoverable = false,
+    )
+
+internal fun VirtualDisplayResult.toAutomationResult(): AutomationResultDto = error?.toAutomationResult()
+    ?: AutomationResultDto(
+        success = true,
+        summary = "Virtual display session ready on display $displayId",
+        recoverable = false,
+        text = "sessionId=$sessionId\ndisplayId=$displayId",
+        mimeType = "text/plain",
+    )
+
+internal fun CapabilityResult<Unit>.toUnitAutomationResult(
+    successSummary: String,
+): AutomationResultDto = errorOrNull()?.toAutomationResult()
+    ?: AutomationResultDto(
+        success = true,
+        summary = successSummary,
         recoverable = false,
     )
 

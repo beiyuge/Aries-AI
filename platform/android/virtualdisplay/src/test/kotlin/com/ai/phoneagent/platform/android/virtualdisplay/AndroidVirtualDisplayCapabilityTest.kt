@@ -6,6 +6,7 @@ import com.ai.phoneagent.core.capability.CaptureResult
 import com.ai.phoneagent.core.capability.CapabilityIds
 import com.ai.phoneagent.core.capability.CapabilityState
 import com.ai.phoneagent.core.capability.VirtualDisplayLifecycle
+import com.ai.phoneagent.core.capability.VirtualDisplayLaunchRequest
 import com.ai.phoneagent.core.capability.VirtualDisplayStartRequest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -52,6 +53,28 @@ class AndroidVirtualDisplayCapabilityTest {
     }
 
     @Test
+    fun `active session launches content and rejects a second start`() = runBlocking {
+        val controller = FakeController()
+        val capability = AndroidVirtualDisplayCapability(controller)
+        val request = VirtualDisplayStartRequest(width = 720, height = 1280, densityDpi = 320)
+
+        val start = capability.start(request)
+        val launch = capability.launch(
+            start.sessionId,
+            VirtualDisplayLaunchRequest("com.example.target"),
+        )
+        val duplicate = capability.start(request)
+
+        assertTrue(launch.isSuccess)
+        assertEquals("virtual_display.session_active", duplicate.error?.code)
+        assertEquals("com.example.target", capability.state.value.diagnostics["application_id"])
+        assertEquals(
+            listOf("start:720x1280", "launch:session-1:com.example.target"),
+            controller.calls,
+        )
+    }
+
+    @Test
     fun `self test creates and releases a tiny session without touching state`() {
         val controller = FakeController()
         val capability = AndroidVirtualDisplayCapability(controller)
@@ -86,6 +109,14 @@ class AndroidVirtualDisplayCapabilityTest {
                     densityDpi = request.densityDpi,
                 ),
             )
+        }
+
+        override suspend fun launch(
+            sessionId: String,
+            request: VirtualDisplayLaunchRequest,
+        ): CapabilityResult<Unit> {
+            calls += "launch:$sessionId:${request.applicationId}"
+            return CapabilityResult.success(Unit)
         }
 
         override suspend fun stop(sessionId: String): CapabilityResult<Unit> {

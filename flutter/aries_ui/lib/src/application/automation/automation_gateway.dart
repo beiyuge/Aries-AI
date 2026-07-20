@@ -11,6 +11,20 @@ abstract interface class AutomationGateway {
 
   Future<AutomationExecutionResult> captureScreen();
 
+  Future<AutomationExecutionResult> startVirtualDisplay({
+    required int width,
+    required int height,
+    required int densityDpi,
+  });
+
+  Future<AutomationExecutionResult> launchOnVirtualDisplay(
+    String applicationId,
+  );
+
+  Future<AutomationExecutionResult> captureVirtualDisplay();
+
+  Future<AutomationExecutionResult> stopVirtualDisplay();
+
   Future<AutomationExecutionResult> tap(int x, int y);
 
   Future<AutomationExecutionResult> swipe({

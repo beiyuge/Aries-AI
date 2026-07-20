@@ -15,6 +15,9 @@ import com.ai.phoneagent.core.capability.TypeTextRequest
 import com.ai.phoneagent.core.capability.UiTreeCapability
 import com.ai.phoneagent.core.capability.UiTreeDetail
 import com.ai.phoneagent.core.capability.UiTreeDumpRequest
+import com.ai.phoneagent.core.capability.VirtualDisplayCapability
+import com.ai.phoneagent.core.capability.VirtualDisplayLaunchRequest
+import com.ai.phoneagent.core.capability.VirtualDisplayStartRequest
 import com.ai.phoneagent.platform.android.capability.AndroidCapabilityRegistry
 import com.ai.phoneagent.re0.generated.AutomationHostApi
 import com.ai.phoneagent.re0.generated.AutomationResultDto
@@ -76,6 +79,79 @@ class AndroidAutomationHostApi(
         withCapability<ScreenCaptureCapability>(CapabilityIds.ScreenCapture, callback) { capability ->
             val format = CaptureFormat.Png
             capability.capture(CaptureRequest(format = format)).toAutomationResult(format)
+        }
+    }
+
+    override fun startVirtualDisplay(
+        width: Long,
+        height: Long,
+        densityDpi: Long,
+        callback: (Result<AutomationResultDto>) -> Unit,
+    ) {
+        val parsedWidth = width.toIntOrNull()
+        val parsedHeight = height.toIntOrNull()
+        val parsedDensity = densityDpi.toIntOrNull()
+        if (parsedWidth == null || parsedHeight == null || parsedDensity == null) {
+            callback.success(
+                automationFailure(
+                    code = "virtual_display.invalid_request",
+                    message = "Virtual display dimensions and density must be 32-bit integers.",
+                    recoverable = false,
+                ),
+            )
+            return
+        }
+        withCapability<VirtualDisplayCapability>(CapabilityIds.VirtualDisplay, callback) { capability ->
+            capability.start(
+                VirtualDisplayStartRequest(
+                    width = parsedWidth,
+                    height = parsedHeight,
+                    densityDpi = parsedDensity,
+                ),
+            ).toAutomationResult()
+        }
+    }
+
+    override fun launchOnVirtualDisplay(
+        applicationId: String,
+        callback: (Result<AutomationResultDto>) -> Unit,
+    ) {
+        if (applicationId.isBlank()) {
+            callback.success(
+                automationFailure(
+                    code = "virtual_display.invalid_request",
+                    message = "Application id cannot be blank.",
+                    recoverable = false,
+                ),
+            )
+            return
+        }
+        withCapability<VirtualDisplayCapability>(CapabilityIds.VirtualDisplay, callback) { capability ->
+            val sessionId = capability.state.value.sessionId
+                ?: return@withCapability noActiveVirtualDisplay()
+            capability.launch(
+                sessionId,
+                VirtualDisplayLaunchRequest(applicationId),
+            ).toUnitAutomationResult("Launched $applicationId on virtual display")
+        }
+    }
+
+    override fun captureVirtualDisplay(callback: (Result<AutomationResultDto>) -> Unit) {
+        withCapability<VirtualDisplayCapability>(CapabilityIds.VirtualDisplay, callback) { capability ->
+            val sessionId = capability.state.value.sessionId
+                ?: return@withCapability noActiveVirtualDisplay()
+            capability.capture(
+                sessionId,
+                CaptureRequest(format = CaptureFormat.Png),
+            ).toAutomationResult(CaptureFormat.Png)
+        }
+    }
+
+    override fun stopVirtualDisplay(callback: (Result<AutomationResultDto>) -> Unit) {
+        withCapability<VirtualDisplayCapability>(CapabilityIds.VirtualDisplay, callback) { capability ->
+            val sessionId = capability.state.value.sessionId
+                ?: return@withCapability noActiveVirtualDisplay()
+            capability.stop(sessionId).toUnitAutomationResult("Virtual display session stopped")
         }
     }
 
@@ -163,6 +239,12 @@ class AndroidAutomationHostApi(
         "full" -> UiTreeDetail.Full
         else -> null
     }
+
+    private fun noActiveVirtualDisplay(): AutomationResultDto = automationFailure(
+        code = "virtual_display.session_not_found",
+        message = "No virtual display session is active.",
+        recoverable = true,
+    )
 
     private fun pointOrReply(
         x: Long,

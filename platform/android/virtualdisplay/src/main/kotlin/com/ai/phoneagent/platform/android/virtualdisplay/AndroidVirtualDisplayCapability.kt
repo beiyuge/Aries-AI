@@ -10,6 +10,7 @@ import com.ai.phoneagent.core.capability.CaptureRequest
 import com.ai.phoneagent.core.capability.CaptureResult
 import com.ai.phoneagent.core.capability.VirtualDisplayCapability
 import com.ai.phoneagent.core.capability.VirtualDisplayLifecycle
+import com.ai.phoneagent.core.capability.VirtualDisplayLaunchRequest
 import com.ai.phoneagent.core.capability.VirtualDisplayResult
 import com.ai.phoneagent.core.capability.VirtualDisplayStartRequest
 import com.ai.phoneagent.core.capability.VirtualDisplayState
@@ -26,6 +27,14 @@ class AndroidVirtualDisplayCapability(
     constructor(context: Context) : this(DisplayManagerVirtualDisplayController(context.applicationContext))
 
     override suspend fun start(request: VirtualDisplayStartRequest): VirtualDisplayResult {
+        val activeSessionId = state.value.sessionId
+        if (activeSessionId != null && state.value.lifecycle == VirtualDisplayLifecycle.Running) {
+            return VirtualDisplayResult(
+                sessionId = activeSessionId,
+                displayId = state.value.displayId ?: -1,
+                error = VirtualDisplayErrors.sessionAlreadyActive(activeSessionId),
+            )
+        }
         state.value = state.value.copy(lifecycle = VirtualDisplayLifecycle.Preparing, diagnostics = controller.diagnostics)
         val result = controller.start(request)
         val session = result.getOrNull()
@@ -50,7 +59,32 @@ class AndroidVirtualDisplayCapability(
         }
     }
 
+    override suspend fun launch(
+        sessionId: String,
+        request: VirtualDisplayLaunchRequest,
+    ): CapabilityResult<Unit> {
+        if (state.value.sessionId != sessionId || state.value.lifecycle != VirtualDisplayLifecycle.Running) {
+            return CapabilityResult.failure(VirtualDisplayErrors.sessionNotFound(sessionId))
+        }
+        val result = controller.launch(sessionId, request)
+        state.value = if (result.isSuccess) {
+            state.value.copy(
+                diagnostics = state.value.diagnostics +
+                    ("application_id" to request.applicationId),
+            )
+        } else {
+            state.value.copy(
+                diagnostics = state.value.diagnostics +
+                    ("launch_error" to (result.errorOrNull()?.code ?: "unknown")),
+            )
+        }
+        return result
+    }
+
     override suspend fun stop(sessionId: String): CapabilityResult<Unit> {
+        if (state.value.sessionId != sessionId) {
+            return CapabilityResult.failure(VirtualDisplayErrors.sessionNotFound(sessionId))
+        }
         state.value = state.value.copy(lifecycle = VirtualDisplayLifecycle.Stopping)
         val result = controller.stop(sessionId)
         state.value = if (result.isSuccess) {

@@ -26,6 +26,26 @@ void main() {
     );
   });
 
+  test('plans the complete virtual display lifecycle', () {
+    final start = planner
+        .plan('start virtual display 1088x1920 dpi 480')
+        .command as StartVirtualDisplayCommand;
+    final launch = planner
+        .plan('launch com.android.settings on virtual display')
+        .command as LaunchOnVirtualDisplayCommand;
+
+    expect((start.width, start.height, start.densityDpi), (1088, 1920, 480));
+    expect(launch.applicationId, 'com.android.settings');
+    expect(
+      planner.plan('capture virtual display').command,
+      isA<CaptureVirtualDisplayCommand>(),
+    );
+    expect(
+      planner.plan('stop virtual display').command,
+      isA<StopVirtualDisplayCommand>(),
+    );
+  });
+
   test('plans input commands with typed arguments', () {
     final tap = planner.plan('tap 12, 34').command as TapCommand;
     final swipe = planner.plan('swipe 1 2 3 4 450').command as SwipeCommand;

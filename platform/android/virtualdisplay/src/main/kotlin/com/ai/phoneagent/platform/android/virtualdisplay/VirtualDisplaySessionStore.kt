@@ -2,26 +2,32 @@ package com.ai.phoneagent.platform.android.virtualdisplay
 
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
+import android.os.HandlerThread
 import java.util.concurrent.ConcurrentHashMap
 
-class ActiveVirtualDisplaySession(
+internal class ActiveVirtualDisplaySession(
     val descriptor: AndroidVirtualDisplaySession,
     val virtualDisplay: VirtualDisplay,
     val imageReader: ImageReader,
+    val frameBuffer: VirtualDisplayFrameBuffer,
+    private val frameThread: HandlerThread,
 ) {
     fun release() {
+        imageReader.setOnImageAvailableListener(null, null)
         virtualDisplay.release()
         imageReader.close()
+        frameBuffer.clear()
+        frameThread.quitSafely()
     }
 }
 
-interface VirtualDisplaySessionStore {
+internal interface VirtualDisplaySessionStore {
     fun put(session: ActiveVirtualDisplaySession)
     fun get(sessionId: String): ActiveVirtualDisplaySession?
     fun remove(sessionId: String): ActiveVirtualDisplaySession?
 }
 
-class InMemoryVirtualDisplaySessionStore : VirtualDisplaySessionStore {
+internal class InMemoryVirtualDisplaySessionStore : VirtualDisplaySessionStore {
     private val sessions = ConcurrentHashMap<String, ActiveVirtualDisplaySession>()
 
     override fun put(session: ActiveVirtualDisplaySession) {

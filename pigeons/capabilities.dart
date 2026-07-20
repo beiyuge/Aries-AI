@@ -91,6 +91,22 @@ abstract class AutomationHostApi {
   AutomationResultDto captureScreen();
 
   @async
+  AutomationResultDto startVirtualDisplay(
+    int width,
+    int height,
+    int densityDpi,
+  );
+
+  @async
+  AutomationResultDto launchOnVirtualDisplay(String applicationId);
+
+  @async
+  AutomationResultDto captureVirtualDisplay();
+
+  @async
+  AutomationResultDto stopVirtualDisplay();
+
+  @async
   AutomationResultDto tap(int x, int y);
 
   @async

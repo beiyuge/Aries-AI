@@ -36,6 +36,34 @@ class PigeonAutomationGateway implements AutomationGateway {
   }
 
   @override
+  Future<AutomationExecutionResult> startVirtualDisplay({
+    required int width,
+    required int height,
+    required int densityDpi,
+  }) {
+    return _invoke(
+      () => _hostApi.startVirtualDisplay(width, height, densityDpi),
+    );
+  }
+
+  @override
+  Future<AutomationExecutionResult> launchOnVirtualDisplay(
+    String applicationId,
+  ) {
+    return _invoke(() => _hostApi.launchOnVirtualDisplay(applicationId));
+  }
+
+  @override
+  Future<AutomationExecutionResult> captureVirtualDisplay() {
+    return _invoke(_hostApi.captureVirtualDisplay);
+  }
+
+  @override
+  Future<AutomationExecutionResult> stopVirtualDisplay() {
+    return _invoke(_hostApi.stopVirtualDisplay);
+  }
+
+  @override
   Future<AutomationExecutionResult> tap(int x, int y) {
     return _invoke(() => _hostApi.tap(x, y));
   }

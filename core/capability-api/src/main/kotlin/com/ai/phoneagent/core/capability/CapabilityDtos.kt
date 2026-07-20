@@ -101,6 +101,10 @@ data class VirtualDisplayStartRequest(
     val densityDpi: Int,
 )
 
+data class VirtualDisplayLaunchRequest(
+    val applicationId: String,
+)
+
 data class VirtualDisplayResult(
     val sessionId: String,
     val displayId: Int,

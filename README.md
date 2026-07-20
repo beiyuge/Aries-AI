@@ -30,6 +30,8 @@ Flutter app
 - Local model load/generate/unload is exposed through the same Pigeon schema. Settings can select and restore a model file, while Chat receives platform errors through shared typed events.
 - Automation commands now flow through a shared planner/runtime/gateway into `AutomationHostApi`. Readiness, UI tree, screen capture, tap, swipe, text, and key operations dispatch to the registered native capabilities with typed success/failure results; Flutter never calls Android APIs directly.
 - Android screen capture now has a real MediaProjection consent flow, foreground-service-backed session lifecycle, frame encoding, and explicit stop command. Screenshot and UI-tree results appear as typed task artifacts; image bytes remain in memory while durable state stores only safe metadata and text previews.
+- Android virtual-display automation now crosses the same typed bridge for start, app launch, capture, and stop. The public `DisplayManager` backend owns its frame reader, waits for non-black content, reports typed launch/frame errors, and releases every session deterministically.
+- Emulator validation created a 720x1280 display with a stable display ID. Android correctly rejects cross-UID activity launch on this untrusted display, so third-party app isolation remains assigned to the future Shizuku trusted-display backend instead of being reported as complete.
 - Attachment content/multimodal adapters, a production local inference engine, speech UI, multi-step agent orchestration, richer Markdown, and real-device validation are still in progress.
 - Non-Android platform backends are intentionally not implemented yet; their contracts must fit behind the same capability API.
 

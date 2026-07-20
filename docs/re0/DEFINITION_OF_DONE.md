@@ -4,10 +4,12 @@ The rewrite is not complete until all items below are true.
 
 ## Current verified evidence
 
-- Flutter analysis and 46 shared/unit/widget tests pass for persisted app state, native file selection, remote streaming, secure credential routing, local-model routing, typed automation planning/execution, artifacts, cancellation, responsive task cards, and settings recovery.
+- Flutter analysis and 47 shared/unit/widget tests pass for persisted app state, native file selection, remote streaming, secure credential routing, local-model routing, typed automation planning/execution, artifacts, cancellation, responsive task cards, and settings recovery.
 - Android `LocalModelHostApi` load/generate/unload has a registry-backed host adapter and JVM tests.
 - Android `AutomationHostApi` dispatches readiness, UI tree, screen capture consent/session control, capture, tap, swipe, text, and key operations through the capability registry with JVM coverage for artifacts, lifecycle control, input parameters, validation, and missing backends.
 - Emulator validation covers Android's real MediaProjection consent dialog, media-projection foreground service, a 1280x2856 PNG frame crossing the typed bridge into a Flutter preview, and explicit session/service shutdown.
+- Virtual-display start, launch, capture, and stop are available through `AutomationHostApi`; the Android backend owns its `ImageReader`, performs near-black frame detection, and reports typed session, launch, and frame failures.
+- Emulator validation created a 720x1280, 320 dpi virtual display with logical display ID 3. Cross-UID activity launch was rejected by Android with `virtual_display.launch_denied`, confirming that third-party app isolation still requires the planned trusted Shizuku backend.
 - `app-re0` assembles with Flutter plugin registration for preferences, file selection, and secure storage.
 - Emulator validation is useful during development but does not replace the real-device checklist below.
 
@@ -41,6 +43,8 @@ The rewrite is not complete until all items below are true.
 - Native runtime: model load/unload/generate and speech recognition wrappers.
 
 The current file-backed local-model backend validates bridge behavior but is not a production inference engine. This item remains open until a real engine is integrated and validated with an actual model.
+
+The public Android virtual-display backend validates lifecycle, frame capture, and error handling, but it is not the final isolated-app backend. This item remains open until trusted cross-UID launch, display-targeted UI tree/input, focus preservation, and IME behavior are verified together.
 
 ## Future platform readiness
 

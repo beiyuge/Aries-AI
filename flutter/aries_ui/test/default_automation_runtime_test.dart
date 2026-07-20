@@ -14,6 +14,18 @@ void main() {
     await runtime.execute(const StopScreenCaptureCommand());
     await runtime.execute(const DumpUiTreeCommand(detail: 'full'));
     await runtime.execute(const CaptureScreenCommand());
+    await runtime.execute(
+      const StartVirtualDisplayCommand(
+        width: 720,
+        height: 1280,
+        densityDpi: 320,
+      ),
+    );
+    await runtime.execute(
+      const LaunchOnVirtualDisplayCommand('com.android.settings'),
+    );
+    await runtime.execute(const CaptureVirtualDisplayCommand());
+    await runtime.execute(const StopVirtualDisplayCommand());
     await runtime.execute(const TapCommand(x: 12, y: 34));
     await runtime.execute(
       const SwipeCommand(
@@ -33,6 +45,10 @@ void main() {
       'capture-stop',
       'tree:full',
       'capture',
+      'virtual-start:720x1280@320',
+      'virtual-launch:com.android.settings',
+      'virtual-capture',
+      'virtual-stop',
       'tap:12,34',
       'swipe:1,2,3,4,500',
       'type:hello',
@@ -89,6 +105,32 @@ class _FakeAutomationGateway implements AutomationGateway {
   @override
   Future<AutomationExecutionResult> captureScreen() async {
     return _record('capture');
+  }
+
+  @override
+  Future<AutomationExecutionResult> startVirtualDisplay({
+    required int width,
+    required int height,
+    required int densityDpi,
+  }) async {
+    return _record('virtual-start:${width}x$height@$densityDpi');
+  }
+
+  @override
+  Future<AutomationExecutionResult> launchOnVirtualDisplay(
+    String applicationId,
+  ) async {
+    return _record('virtual-launch:$applicationId');
+  }
+
+  @override
+  Future<AutomationExecutionResult> captureVirtualDisplay() async {
+    return _record('virtual-capture');
+  }
+
+  @override
+  Future<AutomationExecutionResult> stopVirtualDisplay() async {
+    return _record('virtual-stop');
   }
 
   @override

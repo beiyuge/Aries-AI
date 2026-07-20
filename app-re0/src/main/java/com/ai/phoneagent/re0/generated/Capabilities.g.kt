@@ -326,6 +326,10 @@ interface AutomationHostApi {
   fun stopScreenCaptureSession(callback: (Result<AutomationResultDto>) -> Unit)
   fun dumpUiTree(detail: String, callback: (Result<AutomationResultDto>) -> Unit)
   fun captureScreen(callback: (Result<AutomationResultDto>) -> Unit)
+  fun startVirtualDisplay(width: Long, height: Long, densityDpi: Long, callback: (Result<AutomationResultDto>) -> Unit)
+  fun launchOnVirtualDisplay(applicationId: String, callback: (Result<AutomationResultDto>) -> Unit)
+  fun captureVirtualDisplay(callback: (Result<AutomationResultDto>) -> Unit)
+  fun stopVirtualDisplay(callback: (Result<AutomationResultDto>) -> Unit)
   fun tap(x: Long, y: Long, callback: (Result<AutomationResultDto>) -> Unit)
   fun swipe(fromX: Long, fromY: Long, toX: Long, toY: Long, durationMs: Long, callback: (Result<AutomationResultDto>) -> Unit)
   fun typeText(text: String, callback: (Result<AutomationResultDto>) -> Unit)
@@ -419,6 +423,84 @@ interface AutomationHostApi {
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             api.captureScreen{ result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.startVirtualDisplay$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val widthArg = args[0] as Long
+            val heightArg = args[1] as Long
+            val densityDpiArg = args[2] as Long
+            api.startVirtualDisplay(widthArg, heightArg, densityDpiArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.launchOnVirtualDisplay$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val applicationIdArg = args[0] as String
+            api.launchOnVirtualDisplay(applicationIdArg) { result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.captureVirtualDisplay$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.captureVirtualDisplay{ result: Result<AutomationResultDto> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.aries_ui.AutomationHostApi.stopVirtualDisplay$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.stopVirtualDisplay{ result: Result<AutomationResultDto> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(wrapError(error))

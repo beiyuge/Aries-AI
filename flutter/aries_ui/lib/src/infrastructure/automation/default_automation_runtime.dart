@@ -15,6 +15,15 @@ class DefaultAutomationRuntime implements AutomationRuntime {
       StopScreenCaptureCommand() => gateway.stopScreenCaptureSession(),
       DumpUiTreeCommand() => gateway.dumpUiTree(command.detail),
       CaptureScreenCommand() => gateway.captureScreen(),
+      StartVirtualDisplayCommand() => gateway.startVirtualDisplay(
+          width: command.width,
+          height: command.height,
+          densityDpi: command.densityDpi,
+        ),
+      LaunchOnVirtualDisplayCommand() =>
+        gateway.launchOnVirtualDisplay(command.applicationId),
+      CaptureVirtualDisplayCommand() => gateway.captureVirtualDisplay(),
+      StopVirtualDisplayCommand() => gateway.stopVirtualDisplay(),
       TapCommand() => gateway.tap(command.x, command.y),
       SwipeCommand() => gateway.swipe(
           fromX: command.fromX,

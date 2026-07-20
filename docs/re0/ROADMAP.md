@@ -26,7 +26,7 @@ The first shared Automation command vocabulary now executes these registered cap
 ## Milestone D: Complex Android capabilities
 
 - Accessibility service
-- VirtualDisplay
+- VirtualDisplay: typed start/launch/capture/stop lifecycle, frame ownership, and black-frame guard complete for the public `DisplayManager` backend; trusted cross-UID launch and display-specific input remain open
 - Floating window
 - Background tasks
 

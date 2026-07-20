@@ -24,6 +24,32 @@ class CaptureScreenCommand extends AutomationCommand {
   const CaptureScreenCommand();
 }
 
+class StartVirtualDisplayCommand extends AutomationCommand {
+  const StartVirtualDisplayCommand({
+    required this.width,
+    required this.height,
+    required this.densityDpi,
+  });
+
+  final int width;
+  final int height;
+  final int densityDpi;
+}
+
+class LaunchOnVirtualDisplayCommand extends AutomationCommand {
+  const LaunchOnVirtualDisplayCommand(this.applicationId);
+
+  final String applicationId;
+}
+
+class CaptureVirtualDisplayCommand extends AutomationCommand {
+  const CaptureVirtualDisplayCommand();
+}
+
+class StopVirtualDisplayCommand extends AutomationCommand {
+  const StopVirtualDisplayCommand();
+}
+
 class TapCommand extends AutomationCommand {
   const TapCommand({required this.x, required this.y});
 
